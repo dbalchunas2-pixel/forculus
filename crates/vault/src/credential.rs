@@ -101,8 +101,9 @@ pub fn credential_from_bytes(
 ) -> forculus_common::Result<Credential> {
     match credential_type {
         CredentialType::BearerToken => {
-            let token = String::from_utf8(bytes.to_vec())
-                .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid UTF-8: {e}")))?;
+            let token = String::from_utf8(bytes.to_vec()).map_err(|e| {
+                forculus_common::ForculusError::Vault(format!("invalid UTF-8: {e}"))
+            })?;
             Ok(Credential::BearerToken(SecretString::from(token)))
         }
         CredentialType::BasicAuth => {

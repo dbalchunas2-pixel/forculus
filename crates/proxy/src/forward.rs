@@ -397,7 +397,8 @@ pub async fn forward_request(
                     }
                     if inspection.should_redact {
                         let body_str = std::str::from_utf8(&resp_bytes).unwrap_or_default();
-                        let redacted = forculus_inspect::redact_text(body_str, &inspection.findings);
+                        let redacted =
+                            forculus_inspect::redact_text(body_str, &inspection.findings);
                         tracing::info!(
                             finding_count = inspection.findings.len(),
                             "redacted upstream response before returning to agent"

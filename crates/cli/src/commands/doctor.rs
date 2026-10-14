@@ -4,8 +4,8 @@ use std::net::TcpListener;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use forculus_config::load_config;
 use colored::Colorize;
+use forculus_config::load_config;
 use serde::Serialize;
 
 #[derive(Serialize)]

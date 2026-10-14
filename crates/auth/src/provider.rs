@@ -255,7 +255,8 @@ mod tests {
     #[test]
     fn resolve_secret_from_env_missing() {
         // Use a var name that is very unlikely to exist
-        let source = ClientSecretSource::Env("FORCULUS_TEST_NONEXISTENT_SECRET_XYZ_999".to_string());
+        let source =
+            ClientSecretSource::Env("FORCULUS_TEST_NONEXISTENT_SECRET_XYZ_999".to_string());
         let err = resolve_secret(&source).unwrap_err();
         assert!(
             err.to_string()

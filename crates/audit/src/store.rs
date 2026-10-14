@@ -36,7 +36,9 @@ impl AuditStore {
             "PRAGMA journal_mode=WAL;
              PRAGMA synchronous=NORMAL;",
         )
-        .map_err(|e| forculus_common::ForculusError::Audit(format!("failed to set pragmas: {e}")))?;
+        .map_err(|e| {
+            forculus_common::ForculusError::Audit(format!("failed to set pragmas: {e}"))
+        })?;
 
         db.execute_batch(
             "CREATE TABLE IF NOT EXISTS audit_events (
@@ -438,10 +440,9 @@ impl AuditStore {
     ) -> forculus_common::Result<HashMap<String, u64>> {
         let sql =
             format!("SELECT {column}, COUNT(*) FROM audit_events {time_filter} GROUP BY {column}");
-        let mut stmt = self
-            .db
-            .prepare(&sql)
-            .map_err(|e| forculus_common::ForculusError::Audit(format!("stats query error: {e}")))?;
+        let mut stmt = self.db.prepare(&sql).map_err(|e| {
+            forculus_common::ForculusError::Audit(format!("stats query error: {e}"))
+        })?;
         let rows = stmt
             .query_map([], |row| {
                 let key: Option<String> = row.get(0)?;
@@ -499,7 +500,9 @@ impl AuditStore {
                 rusqlite::params![since.to_rfc3339()],
                 |row| row.get(0),
             )
-            .map_err(|e| forculus_common::ForculusError::Audit(format!("count since error: {e}")))?;
+            .map_err(|e| {
+                forculus_common::ForculusError::Audit(format!("count since error: {e}"))
+            })?;
         Ok(count as u64)
     }
 
@@ -521,7 +524,9 @@ impl AuditStore {
 
         let rows = stmt
             .query_map([], |row| self.row_to_event(row))
-            .map_err(|e| forculus_common::ForculusError::Audit(format!("verify query error: {e}")))?;
+            .map_err(|e| {
+                forculus_common::ForculusError::Audit(format!("verify query error: {e}"))
+            })?;
 
         let mut events = Vec::new();
         for row in rows {

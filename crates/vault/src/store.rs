@@ -132,7 +132,9 @@ impl Vault {
         }
         if meta_path.exists() {
             std::fs::remove_file(&meta_path).map_err(|e| {
-                forculus_common::ForculusError::Vault(format!("failed to remove metadata file: {e}"))
+                forculus_common::ForculusError::Vault(format!(
+                    "failed to remove metadata file: {e}"
+                ))
             })?;
         }
 
@@ -189,7 +191,9 @@ impl Vault {
 }
 
 /// Load credential entry metadata from `.meta.json` sidecar files.
-fn load_credential_entries(dir: &Path) -> forculus_common::Result<HashMap<String, CredentialEntry>> {
+fn load_credential_entries(
+    dir: &Path,
+) -> forculus_common::Result<HashMap<String, CredentialEntry>> {
     let mut entries = HashMap::new();
 
     if !dir.exists() {

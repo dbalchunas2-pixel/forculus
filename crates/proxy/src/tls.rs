@@ -138,9 +138,11 @@ impl ResolvesServerCert for TlsState {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-fn generate_ca() -> forculus_common::Result<(rcgen::Certificate, KeyPair, CertificateDer<'static>)> {
-    let key = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)
-        .map_err(|e| forculus_common::ForculusError::Tls(format!("CA key generation failed: {e}")))?;
+fn generate_ca() -> forculus_common::Result<(rcgen::Certificate, KeyPair, CertificateDer<'static>)>
+{
+    let key = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).map_err(|e| {
+        forculus_common::ForculusError::Tls(format!("CA key generation failed: {e}"))
+    })?;
 
     let mut params = CertificateParams::default();
     params

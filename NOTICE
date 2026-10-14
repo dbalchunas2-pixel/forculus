@@ -1,0 +1,15 @@
+Forculus - MCP firewall and permission broker
+Copyright 2026 David Joseph Balchunas Jr.
+
+This product includes software developed as part of the bulwark project
+(https://github.com/claudius-ars/bulwark), forked at commit 7563549
+(February 2026), and is licensed under the Apache License, Version 2.0.
+
+In accordance with Apache License 2.0 Section 4(b), all copyright, patent,
+trademark, and attribution notices from the upstream project are retained.
+A summary of changes made since the fork is maintained in CHANGES.md.
+
+Upstream components retained:
+  - bulwark engine crates (policy, vault, inspect, audit, ratelimit, mcp,
+    proxy, auth, config, cli, common) - renamed to forculus-* in 2026;
+    see CHANGES.md for the complete change record.

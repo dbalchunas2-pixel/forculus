@@ -174,8 +174,9 @@ pub fn load_bindings(path: &std::path::Path) -> forculus_common::Result<Vec<Cred
             path.display()
         ))
     })?;
-    let file: BindingsFile = serde_yaml::from_str(&contents)
-        .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid bindings YAML: {e}")))?;
+    let file: BindingsFile = serde_yaml::from_str(&contents).map_err(|e| {
+        forculus_common::ForculusError::Vault(format!("invalid bindings YAML: {e}"))
+    })?;
     Ok(file.bindings)
 }
 

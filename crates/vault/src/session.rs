@@ -207,7 +207,9 @@ impl SessionStore {
                 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);",
             )
             .map_err(|e| {
-                forculus_common::ForculusError::Vault(format!("failed to create sessions table: {e}"))
+                forculus_common::ForculusError::Vault(format!(
+                    "failed to create sessions table: {e}"
+                ))
             })
     }
 
@@ -354,12 +356,15 @@ impl SessionStore {
                     description: row.get(10)?,
                 })
             })
-            .map_err(|e| forculus_common::ForculusError::Vault(format!("session list error: {e}")))?;
+            .map_err(|e| {
+                forculus_common::ForculusError::Vault(format!("session list error: {e}"))
+            })?;
 
         let mut sessions = Vec::new();
         for row in rows {
-            let row = row
-                .map_err(|e| forculus_common::ForculusError::Vault(format!("row read error: {e}")))?;
+            let row = row.map_err(|e| {
+                forculus_common::ForculusError::Vault(format!("row read error: {e}"))
+            })?;
             sessions.push(row.into_session()?);
         }
         Ok(sessions)

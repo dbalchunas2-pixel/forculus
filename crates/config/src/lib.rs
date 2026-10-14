@@ -492,8 +492,9 @@ pub fn load_config(path: &Path) -> forculus_common::Result<ForculusConfig> {
         tracing::info!(?path, "config file not found, using defaults");
         return Ok(ForculusConfig::default());
     }
-    let contents = std::fs::read_to_string(path)
-        .map_err(|e| forculus_common::ForculusError::Config(format!("failed to read config: {e}")))?;
+    let contents = std::fs::read_to_string(path).map_err(|e| {
+        forculus_common::ForculusError::Config(format!("failed to read config: {e}"))
+    })?;
     let config: ForculusConfig = serde_yaml::from_str(&contents)
         .map_err(|e| forculus_common::ForculusError::Config(format!("invalid YAML: {e}")))?;
     Ok(config)

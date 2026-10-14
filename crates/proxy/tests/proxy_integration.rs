@@ -1441,7 +1441,8 @@ async fn proxy_skips_response_inspection_when_disabled() {
         inspect_responses: false,
         ..Default::default()
     };
-    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::from_config(&config).unwrap());
+    let scanner =
+        Arc::new(forculus_inspect::scanner::ContentScanner::from_config(&config).unwrap());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner_config(ca_dir.to_str().unwrap(), scanner).await;
@@ -1488,7 +1489,8 @@ async fn proxy_skips_request_inspection_when_disabled() {
         inspect_requests: false,
         ..Default::default()
     };
-    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::from_config(&config).unwrap());
+    let scanner =
+        Arc::new(forculus_inspect::scanner::ContentScanner::from_config(&config).unwrap());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner_config(ca_dir.to_str().unwrap(), scanner).await;

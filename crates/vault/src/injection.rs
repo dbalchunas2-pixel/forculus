@@ -128,7 +128,10 @@ mod tests {
         let cred = Credential::BearerToken(SecretString::from("tok".to_string()));
         let inj = http_injection(&cred);
         assert!(inj.strip_headers.contains(&"authorization".to_string()));
-        assert!(inj.strip_headers.contains(&"x-forculus-session".to_string()));
+        assert!(
+            inj.strip_headers
+                .contains(&"x-forculus-session".to_string())
+        );
     }
 
     #[test]

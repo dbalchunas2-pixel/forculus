@@ -1,0 +1,11 @@
+# cargo-audit config. Keep in sync with deny.toml [advisories] ignore list.
+[advisories]
+ignore = [
+    "RUSTSEC-2023-0071", # rsa Marvin Attack (via openidconnect, no fix available; OIDC-only path, low exposure)
+    "RUSTSEC-2024-0384", # instant unmaintained
+    "RUSTSEC-2025-0134", # rustls-pemfile unmaintained
+    "RUSTSEC-2026-0173", # proc-macro-error2 unmaintained (build dep only)
+    "RUSTSEC-2024-0449", # unsafe-libyaml unmaintained
+    "RUSTSEC-2026-0253", # lru unsound pop(); F2 audit scope
+    "RUSTSEC-2026-0002", # lru IterMut; F2 audit scope
+]
