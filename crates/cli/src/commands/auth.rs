@@ -1,4 +1,4 @@
-//! `bulwark auth` — OIDC authentication commands and management server.
+//! `forculus auth` — OIDC authentication commands and management server.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -6,13 +6,13 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-use bulwark_audit::event::{AuditEvent, Channel, EventType, RequestInfo, SessionInfo};
-use bulwark_audit::logger::AuditLogger;
-use bulwark_auth::provider::{AuthProvider, AuthProviderConfig, ClientSecretSource};
-use bulwark_auth::{Nonce, PkceCodeVerifier};
-use bulwark_config::{AuthOidcConfig, SecretSource, load_config};
-use bulwark_vault::session::CreateSessionParams;
-use bulwark_vault::store::Vault;
+use forculus_audit::event::{AuditEvent, Channel, EventType, RequestInfo, SessionInfo};
+use forculus_audit::logger::AuditLogger;
+use forculus_auth::provider::{AuthProvider, AuthProviderConfig, ClientSecretSource};
+use forculus_auth::{Nonce, PkceCodeVerifier};
+use forculus_config::{AuthOidcConfig, SecretSource, load_config};
+use forculus_vault::session::CreateSessionParams;
+use forculus_vault::store::Vault;
 use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::server::conn::http1::Builder;
@@ -49,7 +49,7 @@ fn to_auth_provider_config(oidc: &AuthOidcConfig) -> AuthProviderConfig {
             .map(|(k, v)| {
                 (
                     k.clone(),
-                    bulwark_auth::GroupMappingEntry {
+                    forculus_auth::GroupMappingEntry {
                         team: v.team.clone(),
                         environment: v.environment.clone(),
                         agent_type: v.agent_type.clone(),
@@ -110,8 +110,8 @@ impl PendingAuthStore {
 
 fn create_session_from_claims(
     vault: &Vault,
-    claims: &bulwark_auth::MappedClaims,
-) -> Result<bulwark_vault::session::Session> {
+    claims: &forculus_auth::MappedClaims,
+) -> Result<forculus_vault::session::Session> {
     let params = CreateSessionParams {
         operator: claims.operator.clone(),
         team: claims.team.clone(),
@@ -132,8 +132,8 @@ fn create_session_from_claims(
 
 fn emit_oidc_audit(
     logger: &Option<AuditLogger>,
-    session: &bulwark_vault::session::Session,
-    claims: &bulwark_auth::MappedClaims,
+    session: &forculus_vault::session::Session,
+    claims: &forculus_auth::MappedClaims,
     action: &str,
     issuer_url: &str,
 ) {
@@ -166,7 +166,7 @@ fn callback_html(token: &str) -> String {
         r#"<!DOCTYPE html>
 <html>
 <head>
-  <title>Bulwark — Session Created</title>
+  <title>Forculus — Session Created</title>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; }}
     code {{ display: block; padding: 12px; background: #f4f4f4; border-radius: 4px; word-break: break-all; margin: 12px 0; }}
@@ -176,7 +176,7 @@ fn callback_html(token: &str) -> String {
 </head>
 <body>
   <h1>Session Created</h1>
-  <p>Your Bulwark session token:</p>
+  <p>Your Forculus session token:</p>
   <code id="token">{token}</code>
   <button onclick="navigator.clipboard.writeText(document.getElementById('token').textContent)">
     Copy to Clipboard
@@ -184,7 +184,7 @@ fn callback_html(token: &str) -> String {
   <p>Configure your agent with this token. It will not be shown again.</p>
   <p>Set it as:</p>
   <ul>
-    <li><strong>HTTP:</strong> <code>X-Bulwark-Session: {token}</code></li>
+    <li><strong>HTTP:</strong> <code>X-Forculus-Session: {token}</code></li>
     <li><strong>MCP:</strong> via initialize params</li>
   </ul>
 </body>
@@ -197,7 +197,7 @@ fn error_html(message: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
 <html>
-<head><title>Bulwark — Error</title>
+<head><title>Forculus — Error</title>
 <style>body {{ font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; }}</style>
 </head>
 <body>
@@ -517,7 +517,7 @@ async fn run_auth_server(
 }
 
 // ---------------------------------------------------------------------------
-// CLI: bulwark auth serve
+// CLI: forculus auth serve
 // ---------------------------------------------------------------------------
 
 pub fn serve(
@@ -533,7 +533,7 @@ pub fn serve(
     let filter = EnvFilter::try_new(&level).unwrap_or_else(|_| EnvFilter::new("info"));
 
     match config.logging.format {
-        bulwark_config::LogFormat::Json => {
+        forculus_config::LogFormat::Json => {
             tracing_subscriber::registry()
                 .with(filter)
                 .with(
@@ -543,7 +543,7 @@ pub fn serve(
                 )
                 .init();
         }
-        bulwark_config::LogFormat::Pretty => {
+        forculus_config::LogFormat::Pretty => {
             tracing_subscriber::registry()
                 .with(filter)
                 .with(
@@ -562,7 +562,7 @@ pub fn serve(
         .filter(|o| o.enabled)
         .ok_or_else(|| {
             anyhow::anyhow!(
-                "OIDC is not configured or not enabled. Add auth.oidc section to bulwark.yaml"
+                "OIDC is not configured or not enabled. Add auth.oidc section to forculus.yaml"
             )
         })?;
 
@@ -583,7 +583,7 @@ pub fn serve(
         let vault = Vault::open(&vault_config).context("opening vault")?;
 
         let audit_logger = if audit_config.enabled {
-            let audit_db_path = bulwark_config::expand_tilde(&audit_config.db_path);
+            let audit_db_path = forculus_config::expand_tilde(&audit_config.db_path);
             match AuditLogger::new(Path::new(&audit_db_path)) {
                 Ok(logger) => {
                     tracing::info!(db = %audit_db_path, "audit logger started");
@@ -624,7 +624,7 @@ pub fn serve(
 }
 
 // ---------------------------------------------------------------------------
-// CLI: bulwark auth status
+// CLI: forculus auth status
 // ---------------------------------------------------------------------------
 
 pub fn status(config_path: &Path) -> Result<()> {
@@ -694,7 +694,7 @@ pub fn status(config_path: &Path) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// CLI: bulwark session create --oidc
+// CLI: forculus session create --oidc
 // ---------------------------------------------------------------------------
 
 pub fn session_create_oidc(config_path: &Path) -> Result<()> {
@@ -707,7 +707,7 @@ pub fn session_create_oidc(config_path: &Path) -> Result<()> {
         .filter(|o| o.enabled)
         .ok_or_else(|| {
             anyhow::anyhow!(
-                "OIDC is not configured or not enabled. Add auth.oidc section to bulwark.yaml"
+                "OIDC is not configured or not enabled. Add auth.oidc section to forculus.yaml"
             )
         })?;
 
@@ -735,7 +735,7 @@ pub fn session_create_oidc(config_path: &Path) -> Result<()> {
         let vault = Vault::open(&vault_config).context("opening vault")?;
 
         let audit_logger = if audit_config.enabled {
-            let audit_db_path = bulwark_config::expand_tilde(&audit_config.db_path);
+            let audit_db_path = forculus_config::expand_tilde(&audit_config.db_path);
             AuditLogger::new(Path::new(&audit_db_path)).ok()
         } else {
             None
@@ -832,9 +832,9 @@ pub fn session_create_oidc(config_path: &Path) -> Result<()> {
                 // The token was already displayed in the HTML callback page
                 println!("Authentication successful! Session token was displayed in browser.");
                 println!();
-                println!("To trust the Bulwark CA certificate:");
-                println!("  Node.js: export NODE_EXTRA_CA_CERTS=\"$(bulwark ca path)\"");
-                println!("  Python:  export REQUESTS_CA_BUNDLE=\"$(bulwark ca path)\"");
+                println!("To trust the Forculus CA certificate:");
+                println!("  Node.js: export NODE_EXTRA_CA_CERTS=\"$(forculus ca path)\"");
+                println!("  Python:  export REQUESTS_CA_BUNDLE=\"$(forculus ca path)\"");
             }
             Ok(Ok(Err(e))) => bail!("Authentication failed: {e}"),
             Ok(Err(_)) => bail!("Authentication callback channel closed unexpectedly"),
@@ -962,7 +962,7 @@ mod tests {
             group_claim: "groups".to_string(),
             group_mapping: HashMap::new(),
             default_session_ttl: 3600,
-            service_accounts: bulwark_config::ServiceAccountConfig { enabled: false },
+            service_accounts: forculus_config::ServiceAccountConfig { enabled: false },
         };
 
         let config = to_auth_provider_config(&oidc);
@@ -992,7 +992,7 @@ mod tests {
             group_claim: "groups".to_string(),
             group_mapping: HashMap::new(),
             default_session_ttl: 7200,
-            service_accounts: bulwark_config::ServiceAccountConfig { enabled: true },
+            service_accounts: forculus_config::ServiceAccountConfig { enabled: true },
         };
 
         let config = to_auth_provider_config(&oidc);
@@ -1018,7 +1018,7 @@ mod tests {
             group_claim: "groups".to_string(),
             group_mapping: HashMap::new(),
             default_session_ttl: 3600,
-            service_accounts: bulwark_config::ServiceAccountConfig { enabled: false },
+            service_accounts: forculus_config::ServiceAccountConfig { enabled: false },
         };
 
         let config = to_auth_provider_config(&oidc);
@@ -1033,7 +1033,7 @@ mod tests {
         let mut group_mapping = HashMap::new();
         group_mapping.insert(
             "engineering".to_string(),
-            bulwark_config::GroupMappingEntry {
+            forculus_config::GroupMappingEntry {
                 team: Some("eng".to_string()),
                 environment: Some("staging".to_string()),
                 agent_type: None,
@@ -1053,7 +1053,7 @@ mod tests {
             group_claim: "groups".to_string(),
             group_mapping,
             default_session_ttl: 3600,
-            service_accounts: bulwark_config::ServiceAccountConfig { enabled: false },
+            service_accounts: forculus_config::ServiceAccountConfig { enabled: false },
         };
 
         let config = to_auth_provider_config(&oidc);

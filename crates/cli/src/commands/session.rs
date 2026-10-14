@@ -1,11 +1,11 @@
-//! `bulwark session` — session management commands.
+//! `forculus session` — session management commands.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_config::load_config;
-use bulwark_vault::session::CreateSessionParams;
-use bulwark_vault::store::Vault;
+use forculus_config::load_config;
+use forculus_vault::session::CreateSessionParams;
+use forculus_vault::store::Vault;
 
 /// Create a new session.
 #[allow(clippy::too_many_arguments)]
@@ -52,14 +52,14 @@ pub fn create(
     }
     println!();
     println!("Give the token to the agent. Set it as:");
-    println!("  HTTP: X-Bulwark-Session: {}", session.token);
+    println!("  HTTP: X-Forculus-Session: {}", session.token);
     println!("  MCP:  via initialize params");
     println!();
-    println!("To trust the Bulwark CA certificate:");
-    println!("  Node.js: export NODE_EXTRA_CA_CERTS=\"$(bulwark ca path)\"");
-    println!("  Python:  export REQUESTS_CA_BUNDLE=\"$(bulwark ca path)\"");
-    println!("  OpenSSL: export SSL_CERT_FILE=\"$(bulwark ca path)\"");
-    println!("  curl:    curl --cacert \"$(bulwark ca path)\" ...");
+    println!("To trust the Forculus CA certificate:");
+    println!("  Node.js: export NODE_EXTRA_CA_CERTS=\"$(forculus ca path)\"");
+    println!("  Python:  export REQUESTS_CA_BUNDLE=\"$(forculus ca path)\"");
+    println!("  OpenSSL: export SSL_CERT_FILE=\"$(forculus ca path)\"");
+    println!("  curl:    curl --cacert \"$(forculus ca path)\" ...");
 
     Ok(())
 }
@@ -146,8 +146,8 @@ pub fn revoke(config_path: &Path, session_id: &str) -> Result<()> {
 }
 
 struct InspectTimeline {
-    events: Vec<bulwark_audit::event::AuditEvent>,
-    session_info: Option<bulwark_audit::event::SessionInfo>,
+    events: Vec<forculus_audit::event::AuditEvent>,
+    session_info: Option<forculus_audit::event::SessionInfo>,
     allowed: u32,
     denied: u32,
     rate_limited: u32,
@@ -156,13 +156,13 @@ struct InspectTimeline {
 
 fn collect_inspect_data(config_path: &Path, session_id: &str) -> Result<InspectTimeline> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store =
-        bulwark_audit::store::AuditStore::open(Path::new(&db_path)).context("opening audit db")?;
+        forculus_audit::store::AuditStore::open(Path::new(&db_path)).context("opening audit db")?;
 
-    let filter = bulwark_audit::query::AuditFilter {
+    let filter = forculus_audit::query::AuditFilter {
         session_id: Some(session_id.to_string()),
-        sort: bulwark_audit::query::SortOrder::Ascending,
+        sort: forculus_audit::query::SortOrder::Ascending,
         ..Default::default()
     };
     let events = store.query(&filter).context("querying audit events")?;
@@ -175,10 +175,10 @@ fn collect_inspect_data(config_path: &Path, session_id: &str) -> Result<InspectT
 
     for event in &events {
         match &event.outcome {
-            bulwark_audit::event::EventOutcome::Success => allowed += 1,
-            bulwark_audit::event::EventOutcome::Denied => denied += 1,
-            bulwark_audit::event::EventOutcome::Escalated
-            | bulwark_audit::event::EventOutcome::Failed => other += 1,
+            forculus_audit::event::EventOutcome::Success => allowed += 1,
+            forculus_audit::event::EventOutcome::Denied => denied += 1,
+            forculus_audit::event::EventOutcome::Escalated
+            | forculus_audit::event::EventOutcome::Failed => other += 1,
         }
         let event_type_str = serde_json::to_value(&event.event_type)
             .map_or_else(|_| String::new(), |v| v.as_str().unwrap_or("").to_string());
@@ -243,15 +243,15 @@ pub fn inspect(config_path: &Path, session_id: &str, json: bool) -> Result<()> {
     for event in &timeline.events {
         let time = event.timestamp.format("%H:%M:%S");
         let outcome_str = match &event.outcome {
-            bulwark_audit::event::EventOutcome::Success => "allowed",
-            bulwark_audit::event::EventOutcome::Denied => "DENIED",
-            bulwark_audit::event::EventOutcome::Escalated => "ESCALATED",
-            bulwark_audit::event::EventOutcome::Failed => "FAILED",
+            forculus_audit::event::EventOutcome::Success => "allowed",
+            forculus_audit::event::EventOutcome::Denied => "DENIED",
+            forculus_audit::event::EventOutcome::Escalated => "ESCALATED",
+            forculus_audit::event::EventOutcome::Failed => "FAILED",
         };
 
         let icon = match &event.outcome {
-            bulwark_audit::event::EventOutcome::Success => "+",
-            bulwark_audit::event::EventOutcome::Denied => "x",
+            forculus_audit::event::EventOutcome::Success => "+",
+            forculus_audit::event::EventOutcome::Denied => "x",
             _ => "!",
         };
 
@@ -325,13 +325,13 @@ audit:
             sessions_db = dir.join("sessions.db").display(),
             audit_db = dir.join("audit.db").display(),
         );
-        let config_path = dir.join("bulwark.yaml");
+        let config_path = dir.join("forculus.yaml");
         std::fs::write(&config_path, config).unwrap();
         config_path
     }
 
-    fn make_session_info(session_id: &str) -> bulwark_audit::event::SessionInfo {
-        bulwark_audit::event::SessionInfo {
+    fn make_session_info(session_id: &str) -> forculus_audit::event::SessionInfo {
+        forculus_audit::event::SessionInfo {
             session_id: session_id.to_string(),
             operator: "alice".to_string(),
             team: None,
@@ -349,18 +349,18 @@ audit:
 
         // Create audit DB and insert events.
         let audit_path = dir.path().join("audit.db");
-        let store = bulwark_audit::store::AuditStore::open(&audit_path).unwrap();
+        let store = forculus_audit::store::AuditStore::open(&audit_path).unwrap();
 
         // Event 1: allowed request.
         store
             .insert(
-                &bulwark_audit::event::AuditEvent::builder(
-                    bulwark_audit::event::EventType::RequestProcessed,
-                    bulwark_audit::event::Channel::HttpProxy,
+                &forculus_audit::event::AuditEvent::builder(
+                    forculus_audit::event::EventType::RequestProcessed,
+                    forculus_audit::event::Channel::HttpProxy,
                 )
-                .outcome(bulwark_audit::event::EventOutcome::Success)
+                .outcome(forculus_audit::event::EventOutcome::Success)
                 .session(make_session_info(session_id))
-                .request(bulwark_audit::event::RequestInfo {
+                .request(forculus_audit::event::RequestInfo {
                     tool: "github".into(),
                     action: "list_repos".into(),
                     resource: None,
@@ -373,13 +373,13 @@ audit:
         // Event 2: denied request.
         store
             .insert(
-                &bulwark_audit::event::AuditEvent::builder(
-                    bulwark_audit::event::EventType::RequestProcessed,
-                    bulwark_audit::event::Channel::HttpProxy,
+                &forculus_audit::event::AuditEvent::builder(
+                    forculus_audit::event::EventType::RequestProcessed,
+                    forculus_audit::event::Channel::HttpProxy,
                 )
-                .outcome(bulwark_audit::event::EventOutcome::Denied)
+                .outcome(forculus_audit::event::EventOutcome::Denied)
                 .session(make_session_info(session_id))
-                .request(bulwark_audit::event::RequestInfo {
+                .request(forculus_audit::event::RequestInfo {
                     tool: "github".into(),
                     action: "delete_repo".into(),
                     resource: None,
@@ -392,13 +392,13 @@ audit:
         // Event 3: another allowed request.
         store
             .insert(
-                &bulwark_audit::event::AuditEvent::builder(
-                    bulwark_audit::event::EventType::RequestProcessed,
-                    bulwark_audit::event::Channel::HttpProxy,
+                &forculus_audit::event::AuditEvent::builder(
+                    forculus_audit::event::EventType::RequestProcessed,
+                    forculus_audit::event::Channel::HttpProxy,
                 )
-                .outcome(bulwark_audit::event::EventOutcome::Success)
+                .outcome(forculus_audit::event::EventOutcome::Success)
                 .session(make_session_info(session_id))
-                .request(bulwark_audit::event::RequestInfo {
+                .request(forculus_audit::event::RequestInfo {
                     tool: "slack".into(),
                     action: "post_message".into(),
                     resource: None,
@@ -431,7 +431,7 @@ audit:
 
         // Create empty audit DB.
         let audit_path = dir.path().join("audit.db");
-        let _store = bulwark_audit::store::AuditStore::open(&audit_path).unwrap();
+        let _store = forculus_audit::store::AuditStore::open(&audit_path).unwrap();
 
         let timeline = collect_inspect_data(&config_path, "nonexistent-session").unwrap();
 

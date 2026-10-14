@@ -1,15 +1,15 @@
 [package]
-name = "bulwark-vault"
+name = "forculus-vault"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Bulwark credential vault and session management"
+description = "Forculus credential vault and session management"
 
 [dependencies]
-bulwark-common.workspace = true
-bulwark-config.workspace = true
-bulwark-policy.workspace = true
+forculus-common.workspace = true
+forculus-config.workspace = true
+forculus-policy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true

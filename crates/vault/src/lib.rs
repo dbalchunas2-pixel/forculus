@@ -1,4 +1,4 @@
-//! Bulwark vault — credential storage, session management, and credential injection.
+//! Forculus vault — credential storage, session management, and credential injection.
 //!
 //! The vault provides:
 //! - Encrypted credential storage using age encryption

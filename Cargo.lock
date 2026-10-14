@@ -347,262 +347,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bulwark-audit"
-version = "0.2.0"
-dependencies = [
- "blake3",
- "bulwark-common",
- "chrono",
- "criterion",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "bulwark-auth"
-version = "0.2.0"
-dependencies = [
- "blake3",
- "bulwark-common",
- "chrono",
- "openidconnect",
- "reqwest",
- "secrecy",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "url",
- "wiremock",
-]
-
-[[package]]
-name = "bulwark-cli"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "bulwark-audit",
- "bulwark-auth",
- "bulwark-common",
- "bulwark-config",
- "bulwark-inspect",
- "bulwark-inspect-http",
- "bulwark-mcp",
- "bulwark-policy",
- "bulwark-proxy",
- "bulwark-vault",
- "chrono",
- "clap",
- "clap_complete",
- "colored",
- "dirs",
- "http",
- "http-body-util",
- "hyper",
- "hyper-util",
- "open",
- "parking_lot",
- "rpassword",
- "secrecy",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "bulwark-common"
-version = "0.2.0"
-dependencies = [
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "bulwark-config"
-version = "0.2.0"
-dependencies = [
- "bulwark-common",
- "bulwark-inspect",
- "dirs",
- "serde",
- "serde_yaml",
- "tracing",
-]
-
-[[package]]
-name = "bulwark-inspect"
-version = "0.2.0"
-dependencies = [
- "bulwark-common",
- "criterion",
- "proptest",
- "regex",
- "serde",
- "serde_json",
- "tempfile",
- "tracing",
-]
-
-[[package]]
-name = "bulwark-inspect-http"
-version = "0.2.0"
-dependencies = [
- "base64 0.22.1",
- "blake3",
- "bulwark-common",
- "bulwark-inspect",
- "lru",
- "parking_lot",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
- "wiremock",
-]
-
-[[package]]
-name = "bulwark-mcp"
-version = "0.2.0"
-dependencies = [
- "bulwark-audit",
- "bulwark-common",
- "bulwark-config",
- "bulwark-inspect",
- "bulwark-inspect-http",
- "bulwark-policy",
- "bulwark-ratelimit",
- "bulwark-vault",
- "bytes",
- "chrono",
- "http",
- "http-body-util",
- "hyper",
- "hyper-util",
- "parking_lot",
- "reqwest",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-test",
- "tokio-util",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "bulwark-policy"
-version = "0.2.0"
-dependencies = [
- "arc-swap",
- "bulwark-common",
- "criterion",
- "notify",
- "proptest",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "bulwark-proxy"
-version = "0.2.0"
-dependencies = [
- "bulwark-audit",
- "bulwark-common",
- "bulwark-config",
- "bulwark-inspect",
- "bulwark-inspect-http",
- "bulwark-policy",
- "bulwark-ratelimit",
- "bulwark-vault",
- "bytes",
- "chrono",
- "http",
- "http-body-util",
- "hyper",
- "hyper-util",
- "lru",
- "parking_lot",
- "pem",
- "rcgen",
- "reqwest",
- "rustls",
- "rustls-native-certs",
- "rustls-pemfile",
- "secrecy",
- "serde",
- "serde_json",
- "tempfile",
- "time",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "bulwark-ratelimit"
-version = "0.2.0"
-dependencies = [
- "bulwark-common",
- "bulwark-config",
- "bulwark-policy",
- "parking_lot",
- "proptest",
- "serde",
- "tracing",
-]
-
-[[package]]
-name = "bulwark-vault"
-version = "0.2.0"
-dependencies = [
- "age",
- "base64 0.22.1",
- "blake3",
- "bulwark-common",
- "bulwark-config",
- "bulwark-policy",
- "chrono",
- "parking_lot",
- "rand 0.8.5",
- "rusqlite",
- "secrecy",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1304,6 +1048,262 @@ name = "foldhash"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
+
+[[package]]
+name = "forculus-audit"
+version = "0.2.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "criterion",
+ "forculus-common",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "forculus-auth"
+version = "0.2.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "forculus-common",
+ "openidconnect",
+ "reqwest",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "url",
+ "wiremock",
+]
+
+[[package]]
+name = "forculus-cli"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "colored",
+ "dirs",
+ "forculus-audit",
+ "forculus-auth",
+ "forculus-common",
+ "forculus-config",
+ "forculus-inspect",
+ "forculus-inspect-http",
+ "forculus-mcp",
+ "forculus-policy",
+ "forculus-proxy",
+ "forculus-vault",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "open",
+ "parking_lot",
+ "rpassword",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "forculus-common"
+version = "0.2.0"
+dependencies = [
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "forculus-config"
+version = "0.2.0"
+dependencies = [
+ "dirs",
+ "forculus-common",
+ "forculus-inspect",
+ "serde",
+ "serde_yaml",
+ "tracing",
+]
+
+[[package]]
+name = "forculus-inspect"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "forculus-common",
+ "proptest",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "forculus-inspect-http"
+version = "0.2.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "forculus-common",
+ "forculus-inspect",
+ "lru",
+ "parking_lot",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
+name = "forculus-mcp"
+version = "0.2.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "forculus-audit",
+ "forculus-common",
+ "forculus-config",
+ "forculus-inspect",
+ "forculus-inspect-http",
+ "forculus-policy",
+ "forculus-ratelimit",
+ "forculus-vault",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "parking_lot",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-test",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "forculus-policy"
+version = "0.2.0"
+dependencies = [
+ "arc-swap",
+ "criterion",
+ "forculus-common",
+ "notify",
+ "proptest",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "forculus-proxy"
+version = "0.2.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "forculus-audit",
+ "forculus-common",
+ "forculus-config",
+ "forculus-inspect",
+ "forculus-inspect-http",
+ "forculus-policy",
+ "forculus-ratelimit",
+ "forculus-vault",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "lru",
+ "parking_lot",
+ "pem",
+ "rcgen",
+ "reqwest",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-pemfile",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "forculus-ratelimit"
+version = "0.2.0"
+dependencies = [
+ "forculus-common",
+ "forculus-config",
+ "forculus-policy",
+ "parking_lot",
+ "proptest",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "forculus-vault"
+version = "0.2.0"
+dependencies = [
+ "age",
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "forculus-common",
+ "forculus-config",
+ "forculus-policy",
+ "parking_lot",
+ "rand 0.8.5",
+ "rusqlite",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "form_urlencoded"

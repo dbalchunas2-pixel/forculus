@@ -1,20 +1,20 @@
 [package]
-name = "bulwark-proxy"
+name = "forculus-proxy"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Bulwark HTTP/HTTPS forward proxy core"
+description = "Forculus HTTP/HTTPS forward proxy core"
 
 [dependencies]
-bulwark-common.workspace = true
-bulwark-config.workspace = true
-bulwark-policy.workspace = true
-bulwark-vault.workspace = true
-bulwark-audit.workspace = true
-bulwark-inspect.workspace = true
-bulwark-ratelimit.workspace = true
-bulwark-inspect-http.workspace = true
+forculus-common.workspace = true
+forculus-config.workspace = true
+forculus-policy.workspace = true
+forculus-vault.workspace = true
+forculus-audit.workspace = true
+forculus-inspect.workspace = true
+forculus-ratelimit.workspace = true
+forculus-inspect-http.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tokio-rustls.workspace = true

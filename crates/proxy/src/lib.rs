@@ -1,4 +1,4 @@
-//! Bulwark proxy — HTTP/HTTPS forward proxy core.
+//! Forculus proxy — HTTP/HTTPS forward proxy core.
 //!
 //! This crate implements a forward proxy that intercepts both plain HTTP and
 //! HTTPS (via CONNECT tunnelling with TLS MITM) traffic, logging every request

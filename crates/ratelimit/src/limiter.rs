@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bulwark_policy::glob::GlobPattern;
+use forculus_policy::glob::GlobPattern;
 
 use crate::bucket::TokenBucket;
 
@@ -84,7 +84,7 @@ struct LimiterState {
 
 impl RateLimiter {
     /// Create a rate limiter from config rules.
-    pub fn new(rules: Vec<bulwark_config::RateLimitRule>) -> Result<Self, String> {
+    pub fn new(rules: Vec<forculus_config::RateLimitRule>) -> Result<Self, String> {
         let compiled = rules
             .into_iter()
             .map(|r| {
@@ -193,7 +193,7 @@ impl fmt::Debug for RateLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bulwark_config::RateLimitRule;
+    use forculus_config::RateLimitRule;
 
     fn rule(name: &str, tools: &[&str], rpm: u32, burst: u32, dims: &[&str]) -> RateLimitRule {
         RateLimitRule {

@@ -32,9 +32,9 @@ impl PatternMatcher {
         severity: Severity,
         category: FindingCategory,
         action: FindingAction,
-    ) -> bulwark_common::Result<Self> {
+    ) -> forculus_common::Result<Self> {
         let regex = Regex::new(pattern).map_err(|e| {
-            bulwark_common::BulwarkError::Inspect(format!("invalid pattern '{}': {e}", pattern))
+            forculus_common::ForculusError::Inspect(format!("invalid pattern '{}': {e}", pattern))
         })?;
         Ok(Self {
             id: id.into(),

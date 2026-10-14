@@ -92,8 +92,8 @@ fn default_timeout_ms() -> u64 {
     200
 }
 
-impl From<&bulwark_inspect::config::HttpAnalyzerConfigRef> for HttpAnalyzerConfig {
-    fn from(r: &bulwark_inspect::config::HttpAnalyzerConfigRef) -> Self {
+impl From<&forculus_inspect::config::HttpAnalyzerConfigRef> for HttpAnalyzerConfig {
+    fn from(r: &forculus_inspect::config::HttpAnalyzerConfigRef) -> Self {
         let on_error = if r.on_error == "fail_closed" {
             OnError::FailClosed
         } else {

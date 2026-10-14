@@ -1,15 +1,15 @@
 [package]
-name = "bulwark-ratelimit"
+name = "forculus-ratelimit"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Bulwark rate limiting and cost tracking"
+description = "Forculus rate limiting and cost tracking"
 
 [dependencies]
-bulwark-common.workspace = true
-bulwark-config.workspace = true
-bulwark-policy.workspace = true
+forculus-common.workspace = true
+forculus-config.workspace = true
+forculus-policy.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
 tracing.workspace = true

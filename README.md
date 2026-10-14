@@ -1,15 +1,15 @@
-# Bulwark
+# Forculus
 
 **Open-source governance layer for AI agents.**
 
-Bulwark sits between AI agents and external tools, enforcing policies, managing credentials, inspecting content, and maintaining a complete audit trail. One policy governs all your agents — Claude Code, OpenClaw, Codex, or any MCP/HTTP client.
+Forculus sits between AI agents and external tools, enforcing policies, managing credentials, inspecting content, and maintaining a complete audit trail. One policy governs all your agents — Claude Code, OpenClaw, Codex, or any MCP/HTTP client.
 
-## Why Bulwark?
+## Why Forculus?
 
-AI agents are powerful but ungoverned. They can access any tool, leak any credential, and leave no audit trail. Bulwark fixes this:
+AI agents are powerful but ungoverned. They can access any tool, leak any credential, and leave no audit trail. Forculus fixes this:
 
 - **Policy enforcement** — YAML-based rules control which tools agents can use, with glob patterns, scope-based precedence, and hot-reload
-- **Credential management** — Agents never see real secrets. Bulwark injects credentials at the last mile, encrypted at rest with age
+- **Credential management** — Agents never see real secrets. Forculus injects credentials at the last mile, encrypted at rest with age
 - **Content inspection** — Scan requests and responses for secrets, PII, and prompt injection. Block or redact automatically
 - **Audit logging** — Every action recorded in a tamper-evident SQLite database with blake3 hash chains
 - **Rate limiting** — Token-bucket rate limits per session, operator, tool, or globally. Cost tracking with budget enforcement
@@ -19,27 +19,27 @@ AI agents are powerful but ungoverned. They can access any tool, leak any creden
 
 ```bash
 # Homebrew (macOS / Linux)
-brew install bpolania/tap/bulwark
+brew install bpolania/tap/forculus
 
 # Docker
-docker pull ghcr.io/bpolania/bulwark
+docker pull ghcr.io/bpolania/forculus
 
 # From source
-git clone https://github.com/bpolania/bulwark.git
-cd bulwark && cargo build --release
+git clone https://github.com/bpolania/forculus.git
+cd forculus && cargo build --release
 ```
 
 ## Quick Start: Govern Claude Code with GitHub
 
-This walkthrough connects Claude Code to GitHub through Bulwark. Every tool call is policy-evaluated, audited, and credential-injected — in about 5 minutes.
+This walkthrough connects Claude Code to GitHub through Forculus. Every tool call is policy-evaluated, audited, and credential-injected — in about 5 minutes.
 
 **Prerequisites:** [Claude Code](https://code.claude.com/) installed, a [GitHub personal access token](https://github.com/settings/tokens), and Node.js/npm (for the GitHub MCP server).
 
 ### 1. Initialize and verify
 
 ```bash
-bulwark init my-project && cd my-project
-bulwark doctor
+forculus init my-project && cd my-project
+forculus doctor
 ```
 
 `doctor` runs 9 diagnostic checks. All should pass.
@@ -47,15 +47,15 @@ bulwark doctor
 ### 2. Store your GitHub token
 
 ```bash
-bulwark cred add github-token --type bearer_token
+forculus cred add github-token --type bearer_token
 # Prompts for the token — hidden input, encrypted with age at rest
 ```
 
-Configure the credential-to-tool binding in your bindings file so Bulwark knows to inject this token for GitHub tool calls.
+Configure the credential-to-tool binding in your bindings file so Forculus knows to inject this token for GitHub tool calls.
 
 ### 3. Configure the upstream GitHub server
 
-Edit `bulwark.yaml`:
+Edit `forculus.yaml`:
 
 ```yaml
 mcp_gateway:
@@ -120,22 +120,22 @@ rules:
     message: "No policy explicitly allows this action"
 EOF
 
-bulwark policy validate
+forculus policy validate
 ```
 
 ### 5. Create a session and connect Claude Code
 
 ```bash
 # Create a session (--ttl is in seconds: 28800 = 8 hours)
-bulwark session create --operator $(whoami) --agent-type claude-code --ttl 28800
+forculus session create --operator $(whoami) --agent-type claude-code --ttl 28800
 # → Token: bwk_sess_7f3a...
 
-export BULWARK_SESSION="bwk_sess_7f3a..."   # paste your actual token
+export FORCULUS_SESSION="bwk_sess_7f3a..."   # paste your actual token
 
-# Register Bulwark as an MCP server in Claude Code
-claude mcp add --transport stdio bulwark \
-  --env BULWARK_SESSION=$BULWARK_SESSION \
-  -- bulwark mcp start
+# Register Forculus as an MCP server in Claude Code
+claude mcp add --transport stdio forculus \
+  --env FORCULUS_SESSION=$FORCULUS_SESSION \
+  -- forculus mcp start
 ```
 
 ### 6. Use Claude Code — now governed
@@ -149,7 +149,7 @@ Try it:
 Open a second terminal:
 
 ```bash
-bulwark audit tail
+forculus audit tail
 ```
 
 ```
@@ -168,43 +168,43 @@ Blocked. Sub-millisecond — policy evaluation happens in memory. The agent gets
 
 ### What just happened
 
-Claude Code connected to Bulwark (not directly to GitHub). For every tool call, Bulwark validated the session, scanned for secrets/PII, evaluated the policy, injected the real GitHub token, scanned the response, and recorded a tamper-evident audit event. Same agent experience — full governance underneath.
+Claude Code connected to Forculus (not directly to GitHub). For every tool call, Forculus validated the session, scanned for secrets/PII, evaluated the policy, injected the real GitHub token, scanned the response, and recorded a tamper-evident audit event. Same agent experience — full governance underneath.
 
 ## Going Deeper
 
 **Content inspection** — 13 built-in patterns scan for AWS keys, GitHub tokens, private keys, PII, and prompt injection. Redaction happens before content reaches the agent.
 
 ```bash
-bulwark inspect rules
-bulwark inspect scan --text "my key is AKIAIOSFODNN7EXAMPLE"
+forculus inspect rules
+forculus inspect scan --text "my key is AKIAIOSFODNN7EXAMPLE"
 ```
 
 **Policy replay** — Preview the impact of policy changes against real audit history before deploying:
 
 ```bash
-bulwark policy test --dir ./new-policies/ --since 1h
+forculus policy test --dir ./new-policies/ --since 1h
 ```
 
 **Audit forensics** — Reconstruct a session timeline and verify the hash chain:
 
 ```bash
-bulwark session inspect <session-id>
-bulwark audit verify
-bulwark audit export --since 24h --format json
+forculus session inspect <session-id>
+forculus audit verify
+forculus audit export --since 24h --format json
 ```
 
-**HTTP proxy mode** — For non-MCP agents, Bulwark runs as a forward proxy with TLS interception:
+**HTTP proxy mode** — For non-MCP agents, Forculus runs as a forward proxy with TLS interception:
 
 ```bash
-bulwark proxy start
-bulwark ca export   # trust the CA in your HTTP client
+forculus proxy start
+forculus ca export   # trust the CA in your HTTP client
 ```
 
 ## Architecture
 
 ```
 ┌─────────────┐     ┌──────────────────────────────────────────────┐     ┌──────────────┐
-│             │     │                  Bulwark                      │     │              │
+│             │     │                  Forculus                      │     │              │
 │  AI Agent   │────>│  Session > Inspect > Policy > Inject > Proxy │────>│  Upstream    │
 │  (Claude,   │<────│  <── Audit <── Inspect <── Response <─────── │<────│  Tool/API    │
 │   Codex,    │     │                                              │     │              │
@@ -253,20 +253,20 @@ See [examples/policies/](./examples/policies/) for complete policy sets (startup
 ## CLI
 
 ```
-bulwark init <path>              # Scaffold a new project
-bulwark proxy start              # Start HTTP/HTTPS proxy
-bulwark mcp start                # Start MCP gateway (stdio)
-bulwark mcp serve                # Start MCP gateway (HTTP)
-bulwark doctor                   # Diagnose setup issues (9 checks)
-bulwark status                   # Health dashboard
-bulwark policy validate          # Validate policy files
-bulwark policy test --dir <path> # Test policies against audit log
-bulwark session create|list|revoke|inspect
-bulwark cred add|list|remove|test
-bulwark audit search|tail|stats|export|verify
-bulwark inspect scan|rules       # Content inspection
-bulwark ca export|path           # CA certificate management
-bulwark completions <shell>      # Shell completions (bash/zsh/fish)
+forculus init <path>              # Scaffold a new project
+forculus proxy start              # Start HTTP/HTTPS proxy
+forculus mcp start                # Start MCP gateway (stdio)
+forculus mcp serve                # Start MCP gateway (HTTP)
+forculus doctor                   # Diagnose setup issues (9 checks)
+forculus status                   # Health dashboard
+forculus policy validate          # Validate policy files
+forculus policy test --dir <path> # Test policies against audit log
+forculus session create|list|revoke|inspect
+forculus cred add|list|remove|test
+forculus audit search|tail|stats|export|verify
+forculus inspect scan|rules       # Content inspection
+forculus ca export|path           # CA certificate management
+forculus completions <shell>      # Shell completions (bash/zsh/fish)
 ```
 
 ## Documentation
@@ -285,8 +285,8 @@ bulwark completions <shell>      # Shell completions (bash/zsh/fish)
 ## Development
 
 ```bash
-git clone https://github.com/bpolania/bulwark.git
-cd bulwark
+git clone https://github.com/bpolania/forculus.git
+cd forculus
 cargo build --workspace
 cargo test --workspace          # 487 tests
 cargo clippy --workspace --all-targets -- -D warnings

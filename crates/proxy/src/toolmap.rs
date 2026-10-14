@@ -1,8 +1,8 @@
 //! URL-to-tool mapper — resolves HTTP URLs to semantic tool/action names
 //! so the same YAML policies can govern both MCP and HTTP agents.
 
-use bulwark_config::{ActionFrom, ToolMapping};
-use bulwark_policy::glob::GlobPattern;
+use forculus_config::{ActionFrom, ToolMapping};
+use forculus_policy::glob::GlobPattern;
 
 /// A compiled URL-to-tool mapping entry.
 #[derive(Debug)]

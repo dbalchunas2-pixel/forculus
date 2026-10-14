@@ -1,4 +1,4 @@
-//! Integration tests for the Bulwark HTTP/HTTPS forward proxy.
+//! Integration tests for the Forculus HTTP/HTTPS forward proxy.
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -13,24 +13,24 @@ use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 
-use bulwark_config::ProxyConfig;
-use bulwark_policy::engine::PolicyEngine;
-use bulwark_proxy::server::ProxyServer;
-use bulwark_vault::credential::{Credential, CredentialType};
-use bulwark_vault::session::CreateSessionParams;
-use bulwark_vault::store::Vault;
+use forculus_config::ProxyConfig;
+use forculus_policy::engine::PolicyEngine;
+use forculus_proxy::server::ProxyServer;
+use forculus_vault::credential::{Credential, CredentialType};
+use forculus_vault::session::CreateSessionParams;
+use forculus_vault::store::Vault;
 use secrecy::SecretString;
 
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
-/// Start a Bulwark proxy on a random port. Returns the bound address and a
+/// Start a Forculus proxy on a random port. Returns the bound address and a
 /// cancellation token.
 async fn start_test_proxy(ca_dir: &str) -> (SocketAddr, CancellationToken, Arc<ProxyServer>) {
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),
@@ -105,7 +105,7 @@ async fn start_echo_server() -> SocketAddr {
 /// Initialise tracing (only once per process).
 fn init_tracing() {
     let _ = tracing_subscriber::fmt()
-        .with_env_filter("bulwark=debug,info")
+        .with_env_filter("forculus=debug,info")
         .try_init();
 }
 
@@ -131,7 +131,7 @@ async fn health_check() {
 
     let body: serde_json::Value = resp.json().await.expect("json body");
     assert_eq!(body["status"], "ok");
-    assert_eq!(body["version"], bulwark_common::VERSION);
+    assert_eq!(body["version"], forculus_common::VERSION);
     assert!(body["uptime_seconds"].is_number());
 
     token.cancel();
@@ -305,14 +305,14 @@ async fn malformed_request() {
     token.cancel();
 }
 
-/// Start a Bulwark proxy with a policy engine attached.
+/// Start a Forculus proxy with a policy engine attached.
 async fn start_test_proxy_with_policy(
     ca_dir: &str,
     engine: Arc<PolicyEngine>,
 ) -> (SocketAddr, CancellationToken) {
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),
@@ -441,7 +441,7 @@ async fn start_test_proxy_with_vault(
 ) -> (SocketAddr, CancellationToken) {
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),
@@ -471,7 +471,7 @@ async fn start_test_proxy_with_vault(
 
 /// Create a test vault with require_sessions enabled.
 fn test_vault_required(dir: &std::path::Path) -> Vault {
-    let config = bulwark_config::VaultConfig {
+    let config = forculus_config::VaultConfig {
         key_path: dir.join("vault-key.age").to_str().unwrap().to_string(),
         credentials_dir: dir.join("credentials").to_str().unwrap().to_string(),
         bindings_path: dir.join("bindings.yaml").to_str().unwrap().to_string(),
@@ -483,7 +483,7 @@ fn test_vault_required(dir: &std::path::Path) -> Vault {
 
 /// Create a test vault without require_sessions.
 fn test_vault_optional(dir: &std::path::Path) -> Vault {
-    let config = bulwark_config::VaultConfig {
+    let config = forculus_config::VaultConfig {
         key_path: dir.join("vault-key.age").to_str().unwrap().to_string(),
         credentials_dir: dir.join("credentials").to_str().unwrap().to_string(),
         bindings_path: dir.join("bindings.yaml").to_str().unwrap().to_string(),
@@ -544,7 +544,7 @@ async fn proxy_returns_401_for_invalid_session_token() {
     // Request with invalid token → 401.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", "bwk_sess_invalid_token_value_here00")
+        .header("X-Forculus-Session", "bwk_sess_invalid_token_value_here00")
         .send()
         .await
         .expect("proxied request");
@@ -588,7 +588,7 @@ async fn proxy_allows_request_with_valid_session() {
     // Request with valid session → 200.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", &session_token)
+        .header("X-Forculus-Session", &session_token)
         .send()
         .await
         .expect("proxied request");
@@ -704,7 +704,7 @@ async fn credential_injected_into_outbound_request() {
     // Send request with session token.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", &session_token)
+        .header("X-Forculus-Session", &session_token)
         .send()
         .await
         .expect("proxied request");
@@ -722,10 +722,10 @@ async fn credential_injected_into_outbound_request() {
         "credential should be injected into outbound request"
     );
 
-    // Verify the X-Bulwark-Session header was stripped (not forwarded to upstream).
+    // Verify the X-Forculus-Session header was stripped (not forwarded to upstream).
     assert!(
-        body["headers"]["x-bulwark-session"].is_null(),
-        "x-bulwark-session header should be stripped from outbound request"
+        body["headers"]["x-forculus-session"].is_null(),
+        "x-forculus-session header should be stripped from outbound request"
     );
 
     token.cancel();
@@ -768,7 +768,7 @@ async fn credential_not_injected_without_binding() {
     // Send request with session but no matching binding.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", &session_token)
+        .header("X-Forculus-Session", &session_token)
         .send()
         .await
         .expect("proxied request");
@@ -798,11 +798,11 @@ async fn http_request_produces_audit_event() {
 
     // Set up audit logger.
     let audit_db = tmp.path().join("audit.db");
-    let logger = bulwark_audit::logger::AuditLogger::new(&audit_db).unwrap();
+    let logger = forculus_audit::logger::AuditLogger::new(&audit_db).unwrap();
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_str().unwrap().to_string(),
         },
         tool_mappings: Vec::new(),
@@ -850,31 +850,31 @@ async fn http_request_produces_audit_event() {
     token.cancel();
 
     // Query the audit store and verify the event.
-    let store = bulwark_audit::store::AuditStore::open(&audit_db).unwrap();
+    let store = forculus_audit::store::AuditStore::open(&audit_db).unwrap();
     let events = store
-        .query(&bulwark_audit::query::AuditFilter::default())
+        .query(&forculus_audit::query::AuditFilter::default())
         .unwrap();
 
     assert!(!events.is_empty(), "should have at least one audit event");
     let event = &events[0];
     assert_eq!(
         event.event_type,
-        bulwark_audit::event::EventType::RequestProcessed
+        forculus_audit::event::EventType::RequestProcessed
     );
-    assert_eq!(event.outcome, bulwark_audit::event::EventOutcome::Success);
-    assert_eq!(event.channel, bulwark_audit::event::Channel::HttpProxy);
+    assert_eq!(event.outcome, forculus_audit::event::EventOutcome::Success);
+    assert_eq!(event.channel, forculus_audit::event::Channel::HttpProxy);
 }
 
 // ── Content inspection cross-crate integration test ──────────────────
 
-/// Start a Bulwark proxy with a content scanner attached.
+/// Start a Forculus proxy with a content scanner attached.
 async fn start_test_proxy_with_scanner(
     ca_dir: &str,
-    scanner: Arc<bulwark_inspect::scanner::ContentScanner>,
+    scanner: Arc<forculus_inspect::scanner::ContentScanner>,
 ) -> (SocketAddr, CancellationToken) {
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),
@@ -920,7 +920,7 @@ async fn http_request_blocked_by_content_inspection() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -970,7 +970,7 @@ async fn http_request_blocked_by_content_inspection() {
 }
 
 #[tokio::test]
-async fn proxy_strips_bulwark_session_header() {
+async fn proxy_strips_forculus_session_header() {
     init_tracing();
     let tmp = tempfile::tempdir().expect("tmp dir");
     let ca_dir = tmp.path().join("ca");
@@ -999,7 +999,7 @@ rules:
     let resp = client
         .get(format!("http://{echo_addr}/test"))
         .header(
-            "X-Bulwark-Session",
+            "X-Forculus-Session",
             "bwk_sess_test123456789abcdef0123456789abcdef",
         )
         .send()
@@ -1010,8 +1010,8 @@ rules:
 
     let body: serde_json::Value = resp.json().await.expect("json body");
     assert!(
-        body["headers"]["x-bulwark-session"].is_null(),
-        "x-bulwark-session must be stripped from forwarded request, got: {:?}",
+        body["headers"]["x-forculus-session"].is_null(),
+        "x-forculus-session must be stripped from forwarded request, got: {:?}",
         body["headers"]
     );
 
@@ -1172,7 +1172,7 @@ async fn proxy_redacts_request_body() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_body_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -1220,7 +1220,7 @@ async fn proxy_block_still_works_after_redaction_wiring() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_body_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -1298,7 +1298,7 @@ async fn proxy_blocks_dangerous_response() {
 
     // Mock upstream returns an AWS key in its response body.
     let upstream_addr = start_fixed_response_server("secret_key = AKIAIOSFODNN7EXAMPLE").await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -1342,7 +1342,7 @@ async fn proxy_redacts_response_body() {
         "output: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.padding_long_enough_for_detection",
     )
     .await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -1385,7 +1385,7 @@ async fn proxy_passes_clean_response() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -1418,10 +1418,10 @@ async fn proxy_passes_clean_response() {
     token.cancel();
 }
 
-/// Start a Bulwark proxy with a content scanner built from a custom config.
+/// Start a Forculus proxy with a content scanner built from a custom config.
 async fn start_test_proxy_with_scanner_config(
     ca_dir: &str,
-    scanner: Arc<bulwark_inspect::scanner::ContentScanner>,
+    scanner: Arc<forculus_inspect::scanner::ContentScanner>,
 ) -> (SocketAddr, CancellationToken) {
     // Reuse existing helper — scanner config flags are on the scanner itself.
     start_test_proxy_with_scanner(ca_dir, scanner).await
@@ -1437,11 +1437,11 @@ async fn proxy_skips_response_inspection_when_disabled() {
     let upstream_addr = start_fixed_response_server("secret_key = AKIAIOSFODNN7EXAMPLE").await;
 
     // Create scanner with inspect_responses disabled.
-    let config = bulwark_inspect::InspectionConfig {
+    let config = forculus_inspect::InspectionConfig {
         inspect_responses: false,
         ..Default::default()
     };
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::from_config(&config).unwrap());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::from_config(&config).unwrap());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner_config(ca_dir.to_str().unwrap(), scanner).await;
@@ -1484,11 +1484,11 @@ async fn proxy_skips_request_inspection_when_disabled() {
     let echo_addr = start_echo_server().await;
 
     // Create scanner with inspect_requests disabled.
-    let config = bulwark_inspect::InspectionConfig {
+    let config = forculus_inspect::InspectionConfig {
         inspect_requests: false,
         ..Default::default()
     };
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::from_config(&config).unwrap());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::from_config(&config).unwrap());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner_config(ca_dir.to_str().unwrap(), scanner).await;
@@ -1557,11 +1557,11 @@ async fn https_connect_tunnel() {
 
 // ── Phase 1G: Tool mapping + Rate limiting integration tests ──────────
 
-use bulwark_config::ToolMapping;
-use bulwark_proxy::toolmap::ToolMapper;
-use bulwark_ratelimit::limiter::RateLimiter;
+use forculus_config::ToolMapping;
+use forculus_proxy::toolmap::ToolMapper;
+use forculus_ratelimit::limiter::RateLimiter;
 
-/// Start a Bulwark proxy with a tool mapper and policy engine.
+/// Start a Forculus proxy with a tool mapper and policy engine.
 async fn start_test_proxy_with_toolmap(
     ca_dir: &str,
     mapper: Arc<ToolMapper>,
@@ -1569,7 +1569,7 @@ async fn start_test_proxy_with_toolmap(
 ) -> (SocketAddr, CancellationToken) {
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),
@@ -1612,7 +1612,7 @@ async fn test_tool_mapping_affects_policy() {
         ToolMapper::new(vec![ToolMapping {
             url_pattern: format!("{}/*", echo_addr),
             tool: "echo".to_string(),
-            action_from: bulwark_config::ActionFrom::UrlPath,
+            action_from: forculus_config::ActionFrom::UrlPath,
         }])
         .unwrap(),
     );
@@ -1681,7 +1681,7 @@ rules:
 
     // Rate limit: 60 RPM, burst=2, global dimension.
     let limiter = Arc::new(
-        RateLimiter::new(vec![bulwark_config::RateLimitRule {
+        RateLimiter::new(vec![forculus_config::RateLimitRule {
             name: "test-limit".to_string(),
             tools: vec!["*".to_string()],
             rpm: 60,
@@ -1693,7 +1693,7 @@ rules:
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_str().unwrap().to_string(),
         },
         tool_mappings: Vec::new(),
@@ -1773,7 +1773,7 @@ rules:
 
     // Rate limit: burst=1, per-session dimension.
     let limiter = Arc::new(
-        RateLimiter::new(vec![bulwark_config::RateLimitRule {
+        RateLimiter::new(vec![forculus_config::RateLimitRule {
             name: "session-limit".to_string(),
             tools: vec!["*".to_string()],
             rpm: 60,
@@ -1811,7 +1811,7 @@ rules:
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_str().unwrap().to_string(),
         },
         tool_mappings: Vec::new(),
@@ -1847,7 +1847,7 @@ rules:
     // Session A: first request succeeds.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", &session_a.token)
+        .header("X-Forculus-Session", &session_a.token)
         .send()
         .await
         .expect("proxied request");
@@ -1856,7 +1856,7 @@ rules:
     // Session A: second request gets rate limited.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", &session_a.token)
+        .header("X-Forculus-Session", &session_a.token)
         .send()
         .await
         .expect("proxied request");
@@ -1869,7 +1869,7 @@ rules:
     // Session B: still has its own bucket, should succeed.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", &session_b.token)
+        .header("X-Forculus-Session", &session_b.token)
         .send()
         .await
         .expect("proxied request");
@@ -1914,7 +1914,7 @@ rules:
         ToolMapper::new(vec![ToolMapping {
             url_pattern: format!("{}/*", echo_addr),
             tool: "echo".to_string(),
-            action_from: bulwark_config::ActionFrom::Static("dangerous_action".to_string()),
+            action_from: forculus_config::ActionFrom::Static("dangerous_action".to_string()),
         }])
         .unwrap(),
     );
@@ -1944,8 +1944,8 @@ rules:
     // MCP gateway: same engine. Tool "echo" with action "dangerous_action" should also be denied.
     // We test this by directly evaluating the policy engine (since full MCP integration
     // requires an upstream server process).
-    use bulwark_policy::context::RequestContext;
-    use bulwark_policy::verdict::Verdict;
+    use forculus_policy::context::RequestContext;
+    use forculus_policy::verdict::Verdict;
 
     let mcp_ctx = RequestContext::new("echo", "dangerous_action");
     let eval = engine.evaluate(&mcp_ctx);
@@ -2106,7 +2106,7 @@ async fn adversarial_binary_body() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -2177,7 +2177,7 @@ async fn adversarial_concurrent_sessions_isolated() {
         handles.push(tokio::spawn(async move {
             let resp = c
                 .get(format!("http://{addr}/test/{i}"))
-                .header("X-Bulwark-Session", &token)
+                .header("X-Forculus-Session", &token)
                 .send()
                 .await
                 .expect("concurrent session request");
@@ -2199,7 +2199,7 @@ async fn adversarial_empty_request_body() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -2282,7 +2282,7 @@ rules:
         ToolMapper::new(vec![ToolMapping {
             url_pattern: "blocked-host:*/*".to_string(),
             tool: "blocked-host".to_string(),
-            action_from: bulwark_config::ActionFrom::UrlPath,
+            action_from: forculus_config::ActionFrom::UrlPath,
         }])
         .unwrap(),
     );
@@ -2332,7 +2332,7 @@ async fn adversarial_unicode_in_request() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_body_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -2459,7 +2459,7 @@ async fn adversarial_sql_injection_in_tool_name() {
         ToolMapper::new(vec![ToolMapping {
             url_pattern: format!("{}/*", echo_addr),
             tool: "echo'; DROP TABLE events;--".to_string(),
-            action_from: bulwark_config::ActionFrom::UrlPath,
+            action_from: forculus_config::ActionFrom::UrlPath,
         }])
         .unwrap(),
     );
@@ -2477,11 +2477,11 @@ rules:
 
     // Set up audit logger to verify SQL injection doesn't corrupt the DB.
     let audit_db = tmp.path().join("audit.db");
-    let logger = bulwark_audit::logger::AuditLogger::new(&audit_db).unwrap();
+    let logger = forculus_audit::logger::AuditLogger::new(&audit_db).unwrap();
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_str().unwrap().to_string(),
         },
         tool_mappings: Vec::new(),
@@ -2535,9 +2535,9 @@ rules:
     logger.shutdown().await;
     token.cancel();
 
-    let store = bulwark_audit::store::AuditStore::open(&audit_db).unwrap();
+    let store = forculus_audit::store::AuditStore::open(&audit_db).unwrap();
     let events = store
-        .query(&bulwark_audit::query::AuditFilter::default())
+        .query(&forculus_audit::query::AuditFilter::default())
         .unwrap();
     assert!(!events.is_empty(), "audit events should be present");
 
@@ -2564,7 +2564,7 @@ async fn adversarial_null_bytes_in_request() {
     let ca_dir = tmp.path().join("ca");
 
     let echo_addr = start_body_echo_server().await;
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let (proxy_addr, token) =
         start_test_proxy_with_scanner(ca_dir.to_str().unwrap(), scanner).await;
@@ -2626,7 +2626,7 @@ async fn adversarial_credential_not_leaked_in_errors() {
     let bad_token = "bwk_sess_0000000000000000000000000000dead";
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Bulwark-Session", bad_token)
+        .header("X-Forculus-Session", bad_token)
         .send()
         .await
         .expect("proxied request");
@@ -2704,7 +2704,7 @@ async fn adversarial_timing_safe_session_validation() {
         let start = std::time::Instant::now();
         let resp = client
             .get(format!("http://{echo_addr}/test"))
-            .header("X-Bulwark-Session", nonexistent_token)
+            .header("X-Forculus-Session", nonexistent_token)
             .send()
             .await
             .expect("proxied request");
@@ -2718,7 +2718,7 @@ async fn adversarial_timing_safe_session_validation() {
         let start = std::time::Instant::now();
         let resp = client
             .get(format!("http://{echo_addr}/test"))
-            .header("X-Bulwark-Session", &session.token)
+            .header("X-Forculus-Session", &session.token)
             .send()
             .await
             .expect("proxied request");
@@ -2818,7 +2818,7 @@ async fn adversarial_audit_log_injection() {
 
     // Create audit logger.
     let audit_db = tmp.path().join("audit_injection.db");
-    let logger = bulwark_audit::logger::AuditLogger::new(&audit_db).unwrap();
+    let logger = forculus_audit::logger::AuditLogger::new(&audit_db).unwrap();
 
     // Create a tool mapper with a tool name containing SQL injection payloads,
     // quotes, tabs, and unicode characters (no newlines — glob `*` doesn't match \n).
@@ -2826,7 +2826,7 @@ async fn adversarial_audit_log_injection() {
         ToolMapper::new(vec![ToolMapping {
             url_pattern: format!("{}/*", echo_addr),
             tool: "tool'; DROP TABLE events;--\twith\ttabs\"and'quotes\u{1F600}".to_string(),
-            action_from: bulwark_config::ActionFrom::UrlPath,
+            action_from: forculus_config::ActionFrom::UrlPath,
         }])
         .unwrap(),
     );
@@ -2843,7 +2843,7 @@ rules:
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_str().unwrap().to_string(),
         },
         tool_mappings: Vec::new(),
@@ -2895,9 +2895,9 @@ rules:
     logger.shutdown().await;
     token.cancel();
 
-    let store = bulwark_audit::store::AuditStore::open(&audit_db).unwrap();
+    let store = forculus_audit::store::AuditStore::open(&audit_db).unwrap();
     let events = store
-        .query(&bulwark_audit::query::AuditFilter::default())
+        .query(&forculus_audit::query::AuditFilter::default())
         .unwrap();
     assert_eq!(events.len(), 3, "should have 3 audit events");
 
@@ -2932,7 +2932,7 @@ rules:
 
     // Rate limit: burst=5, 60 RPM, global dimension.
     let limiter = Arc::new(
-        RateLimiter::new(vec![bulwark_config::RateLimitRule {
+        RateLimiter::new(vec![forculus_config::RateLimitRule {
             name: "concurrent-test".to_string(),
             tools: vec!["*".to_string()],
             rpm: 60,
@@ -2944,7 +2944,7 @@ rules:
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_str().unwrap().to_string(),
         },
         tool_mappings: Vec::new(),
@@ -3025,7 +3025,7 @@ rules:
 /// Verify that GlobPattern matching works correctly for passthrough host patterns.
 #[tokio::test]
 async fn test_tls_passthrough_pattern_matching() {
-    use bulwark_policy::glob::GlobPattern;
+    use forculus_policy::glob::GlobPattern;
 
     let patterns: Vec<GlobPattern> = vec![
         GlobPattern::compile("*.pinned-service.com").unwrap(),
@@ -3058,7 +3058,7 @@ async fn test_tls_passthrough_pattern_matching() {
 /// the proxy returns 200 and pipes TCP bytes through.
 #[tokio::test]
 async fn test_tls_passthrough_tunnels_tcp() {
-    use bulwark_policy::glob::GlobPattern;
+    use forculus_policy::glob::GlobPattern;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     // Start a simple TCP echo server (non-TLS).
@@ -3092,7 +3092,7 @@ async fn test_tls_passthrough_tunnels_tcp() {
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),
@@ -3170,7 +3170,7 @@ async fn test_no_passthrough_backward_compatible() {
 
     let config = ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
-        tls: bulwark_config::TlsConfig {
+        tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string(),
         },
         tool_mappings: Vec::new(),

@@ -18,10 +18,10 @@ pub struct AuditStore {
 
 impl AuditStore {
     /// Open or create the audit database at the given path.
-    pub fn open(path: &Path) -> bulwark_common::Result<Self> {
+    pub fn open(path: &Path) -> forculus_common::Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                bulwark_common::BulwarkError::Audit(format!(
+                forculus_common::ForculusError::Audit(format!(
                     "failed to create directory {}: {e}",
                     parent.display()
                 ))
@@ -29,14 +29,14 @@ impl AuditStore {
         }
 
         let db = rusqlite::Connection::open(path).map_err(|e| {
-            bulwark_common::BulwarkError::Audit(format!("failed to open audit database: {e}"))
+            forculus_common::ForculusError::Audit(format!("failed to open audit database: {e}"))
         })?;
 
         db.execute_batch(
             "PRAGMA journal_mode=WAL;
              PRAGMA synchronous=NORMAL;",
         )
-        .map_err(|e| bulwark_common::BulwarkError::Audit(format!("failed to set pragmas: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Audit(format!("failed to set pragmas: {e}")))?;
 
         db.execute_batch(
             "CREATE TABLE IF NOT EXISTS audit_events (
@@ -82,21 +82,21 @@ impl AuditStore {
             CREATE INDEX IF NOT EXISTS idx_audit_channel ON audit_events(channel);",
         )
         .map_err(|e| {
-            bulwark_common::BulwarkError::Audit(format!("failed to create audit table: {e}"))
+            forculus_common::ForculusError::Audit(format!("failed to create audit table: {e}"))
         })?;
 
         Ok(Self { db })
     }
 
     /// Insert a single event.
-    pub fn insert(&self, event: &AuditEvent) -> bulwark_common::Result<()> {
+    pub fn insert(&self, event: &AuditEvent) -> forculus_common::Result<()> {
         self.insert_inner(&self.db, event)
     }
 
     /// Insert a batch of events in a single transaction.
-    pub fn insert_batch(&self, events: &[AuditEvent]) -> bulwark_common::Result<usize> {
+    pub fn insert_batch(&self, events: &[AuditEvent]) -> forculus_common::Result<usize> {
         let tx = self.db.unchecked_transaction().map_err(|e| {
-            bulwark_common::BulwarkError::Audit(format!("failed to begin transaction: {e}"))
+            forculus_common::ForculusError::Audit(format!("failed to begin transaction: {e}"))
         })?;
         let mut count = 0;
         for event in events {
@@ -104,13 +104,13 @@ impl AuditStore {
             count += 1;
         }
         tx.commit().map_err(|e| {
-            bulwark_common::BulwarkError::Audit(format!("failed to commit transaction: {e}"))
+            forculus_common::ForculusError::Audit(format!("failed to commit transaction: {e}"))
         })?;
         Ok(count)
     }
 
     /// Query events with filters.
-    pub fn query(&self, filter: &AuditFilter) -> bulwark_common::Result<Vec<AuditEvent>> {
+    pub fn query(&self, filter: &AuditFilter) -> forculus_common::Result<Vec<AuditEvent>> {
         let (where_clause, params) = filter.to_sql();
         let order_limit = filter.order_limit_sql();
         let sql = format!("SELECT * FROM audit_events {where_clause} {order_limit}");
@@ -121,24 +121,24 @@ impl AuditStore {
             .collect();
 
         let mut stmt = self.db.prepare(&sql).map_err(|e| {
-            bulwark_common::BulwarkError::Audit(format!("query prepare error: {e}"))
+            forculus_common::ForculusError::Audit(format!("query prepare error: {e}"))
         })?;
 
         let rows = stmt
             .query_map(param_refs.as_slice(), |row| self.row_to_event(row))
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("query error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("query error: {e}")))?;
 
         let mut events = Vec::new();
         for row in rows {
             events.push(row.map_err(|e| {
-                bulwark_common::BulwarkError::Audit(format!("row read error: {e}"))
+                forculus_common::ForculusError::Audit(format!("row read error: {e}"))
             })?);
         }
         Ok(events)
     }
 
     /// Count events matching a filter.
-    pub fn count(&self, filter: &AuditFilter) -> bulwark_common::Result<u64> {
+    pub fn count(&self, filter: &AuditFilter) -> forculus_common::Result<u64> {
         let (where_clause, params) = filter.to_sql();
         let sql = format!("SELECT COUNT(*) FROM audit_events {where_clause}");
 
@@ -150,13 +150,13 @@ impl AuditStore {
         let count: i64 = self
             .db
             .query_row(&sql, param_refs.as_slice(), |row| row.get(0))
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("count error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("count error: {e}")))?;
 
         Ok(count as u64)
     }
 
     /// Get aggregate statistics.
-    pub fn stats(&self, since: Option<DateTime<Utc>>) -> bulwark_common::Result<AuditStats> {
+    pub fn stats(&self, since: Option<DateTime<Utc>>) -> forculus_common::Result<AuditStats> {
         let time_filter = since
             .map(|t| format!("WHERE timestamp >= '{}'", t.to_rfc3339()))
             .unwrap_or_default();
@@ -168,7 +168,7 @@ impl AuditStore {
                 [],
                 |row| row.get(0),
             )
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("stats error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("stats error: {e}")))?;
 
         let by_event_type = self.count_by_column("event_type", &time_filter)?;
         let by_outcome = self.count_by_column("outcome", &time_filter)?;
@@ -195,19 +195,19 @@ impl AuditStore {
     }
 
     /// Delete events older than the given timestamp.
-    pub fn delete_before(&self, before: DateTime<Utc>) -> bulwark_common::Result<u64> {
+    pub fn delete_before(&self, before: DateTime<Utc>) -> forculus_common::Result<u64> {
         let count = self
             .db
             .execute(
                 "DELETE FROM audit_events WHERE timestamp < ?1",
                 rusqlite::params![before.to_rfc3339()],
             )
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("delete error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("delete error: {e}")))?;
         Ok(count as u64)
     }
 
     /// Get the most recent N events.
-    pub fn recent(&self, limit: usize) -> bulwark_common::Result<Vec<AuditEvent>> {
+    pub fn recent(&self, limit: usize) -> forculus_common::Result<Vec<AuditEvent>> {
         self.query(&AuditFilter {
             limit: Some(limit),
             ..Default::default()
@@ -220,7 +220,7 @@ impl AuditStore {
         &self,
         conn: &rusqlite::Connection,
         event: &AuditEvent,
-    ) -> bulwark_common::Result<()> {
+    ) -> forculus_common::Result<()> {
         let event_type_str = serde_json::to_value(&event.event_type)
             .unwrap()
             .as_str()
@@ -315,7 +315,7 @@ impl AuditStore {
                 prev_hash,
             ],
         )
-        .map_err(|e| bulwark_common::BulwarkError::Audit(format!("insert error: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Audit(format!("insert error: {e}")))?;
         Ok(())
     }
 
@@ -435,25 +435,25 @@ impl AuditStore {
         &self,
         column: &str,
         time_filter: &str,
-    ) -> bulwark_common::Result<HashMap<String, u64>> {
+    ) -> forculus_common::Result<HashMap<String, u64>> {
         let sql =
             format!("SELECT {column}, COUNT(*) FROM audit_events {time_filter} GROUP BY {column}");
         let mut stmt = self
             .db
             .prepare(&sql)
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("stats query error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("stats query error: {e}")))?;
         let rows = stmt
             .query_map([], |row| {
                 let key: Option<String> = row.get(0)?;
                 let count: i64 = row.get(1)?;
                 Ok((key.unwrap_or_else(|| "unknown".to_string()), count as u64))
             })
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("stats row error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("stats row error: {e}")))?;
 
         let mut map = HashMap::new();
         for row in rows {
             let (key, count) = row.map_err(|e| {
-                bulwark_common::BulwarkError::Audit(format!("stats read error: {e}"))
+                forculus_common::ForculusError::Audit(format!("stats read error: {e}"))
             })?;
             map.insert(key, count);
         }
@@ -465,7 +465,7 @@ impl AuditStore {
         column: &str,
         time_filter: &str,
         limit: usize,
-    ) -> bulwark_common::Result<Vec<(String, u64)>> {
+    ) -> forculus_common::Result<Vec<(String, u64)>> {
         let sql = format!(
             "SELECT {column}, COUNT(*) as cnt FROM audit_events {time_filter} \
              WHERE {column} IS NOT NULL GROUP BY {column} ORDER BY cnt DESC LIMIT {limit}"
@@ -473,25 +473,25 @@ impl AuditStore {
         let mut stmt = self
             .db
             .prepare(&sql)
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("top query error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("top query error: {e}")))?;
         let rows = stmt
             .query_map([], |row| {
                 let key: String = row.get(0)?;
                 let count: i64 = row.get(1)?;
                 Ok((key, count as u64))
             })
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("top row error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("top row error: {e}")))?;
 
         let mut result = Vec::new();
         for row in rows {
             result.push(row.map_err(|e| {
-                bulwark_common::BulwarkError::Audit(format!("top read error: {e}"))
+                forculus_common::ForculusError::Audit(format!("top read error: {e}"))
             })?);
         }
         Ok(result)
     }
 
-    fn count_since(&self, since: DateTime<Utc>) -> bulwark_common::Result<u64> {
+    fn count_since(&self, since: DateTime<Utc>) -> forculus_common::Result<u64> {
         let count: i64 = self
             .db
             .query_row(
@@ -499,7 +499,7 @@ impl AuditStore {
                 rusqlite::params![since.to_rfc3339()],
                 |row| row.get(0),
             )
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("count since error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("count since error: {e}")))?;
         Ok(count as u64)
     }
 
@@ -511,22 +511,22 @@ impl AuditStore {
     /// 3. Each event's stored `event_hash` matches the re-computed hash.
     ///
     /// Returns a [`ChainVerification`] with the result.
-    pub fn verify_chain(&self) -> bulwark_common::Result<ChainVerification> {
+    pub fn verify_chain(&self) -> forculus_common::Result<ChainVerification> {
         let mut stmt = self
             .db
             .prepare("SELECT * FROM audit_events ORDER BY rowid ASC")
             .map_err(|e| {
-                bulwark_common::BulwarkError::Audit(format!("verify prepare error: {e}"))
+                forculus_common::ForculusError::Audit(format!("verify prepare error: {e}"))
             })?;
 
         let rows = stmt
             .query_map([], |row| self.row_to_event(row))
-            .map_err(|e| bulwark_common::BulwarkError::Audit(format!("verify query error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Audit(format!("verify query error: {e}")))?;
 
         let mut events = Vec::new();
         for row in rows {
             events.push(row.map_err(|e| {
-                bulwark_common::BulwarkError::Audit(format!("verify row error: {e}"))
+                forculus_common::ForculusError::Audit(format!("verify row error: {e}"))
             })?);
         }
 

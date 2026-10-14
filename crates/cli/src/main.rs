@@ -1,4 +1,4 @@
-//! Bulwark CLI — binary entry point for the `bulwark` command.
+//! Forculus CLI — binary entry point for the `forculus` command.
 
 use std::path::PathBuf;
 
@@ -10,10 +10,10 @@ mod commands;
 
 /// Governance layer for AI agents.
 #[derive(Parser)]
-#[command(name = "bulwark", about = "Governance layer for AI agents", version)]
+#[command(name = "forculus", about = "Governance layer for AI agents", version)]
 struct Cli {
     /// Path to config file.
-    #[arg(long, default_value = "bulwark.yaml", global = true)]
+    #[arg(long, default_value = "forculus.yaml", global = true)]
     config: PathBuf,
 
     /// Override the log level (trace, debug, info, warn, error).
@@ -35,12 +35,12 @@ enum Commands {
         #[command(subcommand)]
         action: ProxyAction,
     },
-    /// Initialize a new Bulwark project.
+    /// Initialize a new Forculus project.
     Init {
         /// Directory to initialize (defaults to current directory).
         path: Option<PathBuf>,
     },
-    /// Manage the Bulwark CA certificate.
+    /// Manage the Forculus CA certificate.
     Ca {
         #[command(subcommand)]
         action: CaAction,
@@ -478,7 +478,7 @@ fn main() -> Result<()> {
         Commands::Status { json } => commands::status::run(&cli.config, json),
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();
-            clap_complete::generate(shell, &mut cmd, "bulwark", &mut std::io::stdout());
+            clap_complete::generate(shell, &mut cmd, "forculus", &mut std::io::stdout());
             Ok(())
         }
     }
@@ -490,7 +490,7 @@ mod tests {
 
     #[test]
     fn no_color_flag_parses() {
-        let cli = Cli::try_parse_from(["bulwark", "--no-color", "inspect", "rules"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "--no-color", "inspect", "rules"]).unwrap();
         assert!(cli.no_color);
     }
 
@@ -498,15 +498,15 @@ mod tests {
     fn completions_bash_generates_output() {
         let mut cmd = Cli::command();
         let mut buf = Vec::new();
-        clap_complete::generate(clap_complete::Shell::Bash, &mut cmd, "bulwark", &mut buf);
+        clap_complete::generate(clap_complete::Shell::Bash, &mut cmd, "forculus", &mut buf);
         let output = String::from_utf8(buf).unwrap();
         assert!(!output.is_empty());
-        assert!(output.contains("bulwark"));
+        assert!(output.contains("forculus"));
     }
 
     #[test]
     fn ca_install_subcommand_parses() {
-        let cli = Cli::try_parse_from(["bulwark", "ca", "install", "--yes"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "ca", "install", "--yes"]).unwrap();
         match cli.command {
             Commands::Ca {
                 action: CaAction::Install { yes },
@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn ca_install_default_no_yes() {
-        let cli = Cli::try_parse_from(["bulwark", "ca", "install"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "ca", "install"]).unwrap();
         match cli.command {
             Commands::Ca {
                 action: CaAction::Install { yes },
@@ -529,7 +529,7 @@ mod tests {
     #[test]
     fn mcp_serve_subcommand_parses() {
         let cli =
-            Cli::try_parse_from(["bulwark", "mcp", "serve", "--listen", "0.0.0.0:4000"]).unwrap();
+            Cli::try_parse_from(["forculus", "mcp", "serve", "--listen", "0.0.0.0:4000"]).unwrap();
         match cli.command {
             Commands::Mcp {
                 action: McpAction::Serve { listen },
@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn mcp_serve_default_no_listen() {
-        let cli = Cli::try_parse_from(["bulwark", "mcp", "serve"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "mcp", "serve"]).unwrap();
         match cli.command {
             Commands::Mcp {
                 action: McpAction::Serve { listen },
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn ca_uninstall_subcommand_parses() {
-        let cli = Cli::try_parse_from(["bulwark", "ca", "uninstall", "-y"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "ca", "uninstall", "-y"]).unwrap();
         match cli.command {
             Commands::Ca {
                 action: CaAction::Uninstall { yes },
@@ -562,7 +562,7 @@ mod tests {
 
     #[test]
     fn session_create_oidc_flag_parses() {
-        let cli = Cli::try_parse_from(["bulwark", "session", "create", "--oidc"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "session", "create", "--oidc"]).unwrap();
         match cli.command {
             Commands::Session {
                 action: SessionAction::Create { oidc, operator, .. },
@@ -577,7 +577,7 @@ mod tests {
     #[test]
     fn session_create_operator_still_works() {
         let cli =
-            Cli::try_parse_from(["bulwark", "session", "create", "--operator", "alice"]).unwrap();
+            Cli::try_parse_from(["forculus", "session", "create", "--operator", "alice"]).unwrap();
         match cli.command {
             Commands::Session {
                 action: SessionAction::Create { oidc, operator, .. },
@@ -591,7 +591,7 @@ mod tests {
 
     #[test]
     fn auth_serve_subcommand_parses() {
-        let cli = Cli::try_parse_from(["bulwark", "auth", "serve"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "auth", "serve"]).unwrap();
         match cli.command {
             Commands::Auth {
                 action: AuthAction::Serve { listen },
@@ -603,7 +603,7 @@ mod tests {
     #[test]
     fn auth_serve_with_listen_parses() {
         let cli =
-            Cli::try_parse_from(["bulwark", "auth", "serve", "--listen", "0.0.0.0:9082"]).unwrap();
+            Cli::try_parse_from(["forculus", "auth", "serve", "--listen", "0.0.0.0:9082"]).unwrap();
         match cli.command {
             Commands::Auth {
                 action: AuthAction::Serve { listen },
@@ -614,7 +614,7 @@ mod tests {
 
     #[test]
     fn auth_status_subcommand_parses() {
-        let cli = Cli::try_parse_from(["bulwark", "auth", "status"]).unwrap();
+        let cli = Cli::try_parse_from(["forculus", "auth", "status"]).unwrap();
         match cli.command {
             Commands::Auth {
                 action: AuthAction::Status,

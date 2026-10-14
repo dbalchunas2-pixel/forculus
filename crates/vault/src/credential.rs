@@ -98,26 +98,26 @@ pub fn credential_to_bytes(credential: &Credential) -> Vec<u8> {
 pub fn credential_from_bytes(
     credential_type: &CredentialType,
     bytes: &[u8],
-) -> bulwark_common::Result<Credential> {
+) -> forculus_common::Result<Credential> {
     match credential_type {
         CredentialType::BearerToken => {
             let token = String::from_utf8(bytes.to_vec())
-                .map_err(|e| bulwark_common::BulwarkError::Vault(format!("invalid UTF-8: {e}")))?;
+                .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid UTF-8: {e}")))?;
             Ok(Credential::BearerToken(SecretString::from(token)))
         }
         CredentialType::BasicAuth => {
             let json: serde_json::Value = serde_json::from_slice(bytes)
-                .map_err(|e| bulwark_common::BulwarkError::Vault(format!("invalid JSON: {e}")))?;
+                .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid JSON: {e}")))?;
             let username = json["username"]
                 .as_str()
                 .ok_or_else(|| {
-                    bulwark_common::BulwarkError::Vault("missing username field".into())
+                    forculus_common::ForculusError::Vault("missing username field".into())
                 })?
                 .to_string();
             let password = json["password"]
                 .as_str()
                 .ok_or_else(|| {
-                    bulwark_common::BulwarkError::Vault("missing password field".into())
+                    forculus_common::ForculusError::Vault("missing password field".into())
                 })?
                 .to_string();
             Ok(Credential::BasicAuth {
@@ -127,16 +127,16 @@ pub fn credential_from_bytes(
         }
         CredentialType::ApiKey => {
             let json: serde_json::Value = serde_json::from_slice(bytes)
-                .map_err(|e| bulwark_common::BulwarkError::Vault(format!("invalid JSON: {e}")))?;
+                .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid JSON: {e}")))?;
             let header_name = json["header_name"]
                 .as_str()
                 .ok_or_else(|| {
-                    bulwark_common::BulwarkError::Vault("missing header_name field".into())
+                    forculus_common::ForculusError::Vault("missing header_name field".into())
                 })?
                 .to_string();
             let key = json["key"]
                 .as_str()
-                .ok_or_else(|| bulwark_common::BulwarkError::Vault("missing key field".into()))?
+                .ok_or_else(|| forculus_common::ForculusError::Vault("missing key field".into()))?
                 .to_string();
             Ok(Credential::ApiKey {
                 header_name,
@@ -145,16 +145,16 @@ pub fn credential_from_bytes(
         }
         CredentialType::CustomHeader => {
             let json: serde_json::Value = serde_json::from_slice(bytes)
-                .map_err(|e| bulwark_common::BulwarkError::Vault(format!("invalid JSON: {e}")))?;
+                .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid JSON: {e}")))?;
             let header_name = json["header_name"]
                 .as_str()
                 .ok_or_else(|| {
-                    bulwark_common::BulwarkError::Vault("missing header_name field".into())
+                    forculus_common::ForculusError::Vault("missing header_name field".into())
                 })?
                 .to_string();
             let value = json["value"]
                 .as_str()
-                .ok_or_else(|| bulwark_common::BulwarkError::Vault("missing value field".into()))?
+                .ok_or_else(|| forculus_common::ForculusError::Vault("missing value field".into()))?
                 .to_string();
             Ok(Credential::CustomHeader {
                 header_name,

@@ -23,7 +23,7 @@ pub fn http_injection(credential: &Credential) -> HttpInjection {
     let strip = vec![
         "authorization".to_string(),
         "proxy-authorization".to_string(),
-        "x-bulwark-session".to_string(),
+        "x-forculus-session".to_string(),
     ];
 
     match credential {
@@ -128,7 +128,7 @@ mod tests {
         let cred = Credential::BearerToken(SecretString::from("tok".to_string()));
         let inj = http_injection(&cred);
         assert!(inj.strip_headers.contains(&"authorization".to_string()));
-        assert!(inj.strip_headers.contains(&"x-bulwark-session".to_string()));
+        assert!(inj.strip_headers.contains(&"x-forculus-session".to_string()));
     }
 
     #[test]

@@ -3,19 +3,19 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use bulwark_audit::event::{
+use forculus_audit::event::{
     AuditEvent, Channel, ErrorInfo, EventOutcome, EventType, PolicyInfo, RequestInfo, SessionInfo,
 };
-use bulwark_audit::logger::AuditLogger;
-use bulwark_audit::store::AuditStore;
-use bulwark_config::McpGatewayConfig;
-use bulwark_inspect::scanner::ContentScanner;
-use bulwark_inspect_http::HttpAnalyzerPipeline;
-use bulwark_policy::engine::PolicyEngine;
-use bulwark_ratelimit::cost::CostTracker;
-use bulwark_ratelimit::limiter::RateLimiter;
-use bulwark_vault::session::Session;
-use bulwark_vault::store::Vault;
+use forculus_audit::logger::AuditLogger;
+use forculus_audit::store::AuditStore;
+use forculus_config::McpGatewayConfig;
+use forculus_inspect::scanner::ContentScanner;
+use forculus_inspect_http::HttpAnalyzerPipeline;
+use forculus_policy::engine::PolicyEngine;
+use forculus_ratelimit::cost::CostTracker;
+use forculus_ratelimit::limiter::RateLimiter;
+use forculus_vault::session::Session;
+use forculus_vault::store::Vault;
 
 use crate::governance::{governance_metadata, governance_metadata_stub};
 use crate::types::{
@@ -45,7 +45,7 @@ pub struct McpGateway {
 
 impl McpGateway {
     /// Create the gateway and start all upstream servers.
-    pub async fn new(config: McpGatewayConfig) -> bulwark_common::Result<Self> {
+    pub async fn new(config: McpGatewayConfig) -> forculus_common::Result<Self> {
         let mut upstreams = HashMap::new();
         for server_config in &config.upstream_servers {
             let server = UpstreamServer::new(server_config.clone()).await?;
@@ -167,7 +167,7 @@ impl McpGateway {
                     return Err(JsonRpcResponse::error(
                         request_id.clone(),
                         SESSION_REQUIRED,
-                        "Session token required. Set via X-Bulwark-Session header.".to_string(),
+                        "Session token required. Set via X-Forculus-Session header.".to_string(),
                     ));
                 }
                 return Ok(None);
@@ -297,8 +297,8 @@ impl McpGateway {
                 }),
             },
             server_info: ServerInfo {
-                name: "bulwark".to_string(),
-                version: Some(bulwark_common::VERSION.to_string()),
+                name: "forculus".to_string(),
+                version: Some(forculus_common::VERSION.to_string()),
             },
         };
 
@@ -374,7 +374,7 @@ impl McpGateway {
             agent_type: s.agent_type.clone(),
         });
 
-        // Dispatch builtin governance tools (bulwark__*) locally.
+        // Dispatch builtin governance tools (forculus__*) locally.
         // Builtin tools bypass rate limiting and policy — they ARE the governance system.
         if server_name == crate::tools::BUILTIN_PREFIX {
             let builtin_ctx = crate::tools::BuiltinContext {
@@ -452,8 +452,8 @@ impl McpGateway {
         // Evaluate policy before upstream lookup (fail-fast on denial).
         let mut policy_info: Option<PolicyInfo> = None;
         if let Some(engine) = &self.policy_engine {
-            use bulwark_policy::context::RequestContext;
-            use bulwark_policy::verdict::Verdict;
+            use forculus_policy::context::RequestContext;
+            use forculus_policy::verdict::Verdict;
 
             let mut ctx = RequestContext::new(server_name, tool_name);
             if let Some(ref s) = session {
@@ -567,7 +567,7 @@ impl McpGateway {
         }
 
         // Inspect request arguments for sensitive content.
-        let mut request_inspection = bulwark_inspect::InspectionResult::empty(0);
+        let mut request_inspection = forculus_inspect::InspectionResult::empty(0);
         let mut final_arguments = params.arguments.clone();
         if let Some(scanner) = self
             .content_scanner
@@ -616,7 +616,7 @@ impl McpGateway {
                         finding_count = request_inspection.findings.len(),
                         "redacting tool call arguments"
                     );
-                    final_arguments = Some(bulwark_inspect::redact_json(
+                    final_arguments = Some(forculus_inspect::redact_json(
                         args,
                         &request_inspection.findings,
                     ));
@@ -653,7 +653,7 @@ impl McpGateway {
                 );
 
                 // Inspect response content.
-                let mut response_inspection = bulwark_inspect::InspectionResult::empty(0);
+                let mut response_inspection = forculus_inspect::InspectionResult::empty(0);
                 let mut result_json = serde_json::to_value(&tool_result).unwrap_or_default();
                 let mut response_was_redacted = false;
                 if let Some(scanner) = self
@@ -714,7 +714,7 @@ impl McpGateway {
                             finding_count = response_inspection.findings.len(),
                             "redacting tool response content"
                         );
-                        result_json = bulwark_inspect::redact_json(
+                        result_json = forculus_inspect::redact_json(
                             &result_json,
                             &response_inspection.findings,
                         );
@@ -723,7 +723,7 @@ impl McpGateway {
                 }
 
                 // Combine request and response findings for governance metadata.
-                let all_findings: Vec<&bulwark_inspect::InspectionFinding> = request_inspection
+                let all_findings: Vec<&forculus_inspect::InspectionFinding> = request_inspection
                     .findings
                     .iter()
                     .chain(response_inspection.findings.iter())
@@ -791,7 +791,7 @@ impl McpGateway {
                 let mut result_value = result_json;
                 if let Some(obj) = result_value.as_object_mut() {
                     let mut meta = if let Some(engine) = &self.policy_engine {
-                        use bulwark_policy::context::RequestContext;
+                        use forculus_policy::context::RequestContext;
                         let ctx = RequestContext::new(server_name, tool_name);
                         let eval = engine.evaluate(&ctx);
                         governance_metadata(&eval)
@@ -821,11 +821,11 @@ impl McpGateway {
                             let max_sev = all_findings.iter().map(|f| f.severity).max();
                             let any_blocked = all_findings
                                 .iter()
-                                .any(|f| f.action == bulwark_inspect::FindingAction::Block);
+                                .any(|f| f.action == forculus_inspect::FindingAction::Block);
                             let any_redacted = response_was_redacted
                                 || all_findings
                                     .iter()
-                                    .any(|f| f.action == bulwark_inspect::FindingAction::Redact);
+                                    .any(|f| f.action == forculus_inspect::FindingAction::Redact);
                             gov["inspection_results"] = serde_json::json!({
                                 "finding_count": all_findings.len(),
                                 "max_severity": serde_json::to_value(max_sev).unwrap_or_default(),

@@ -1,5 +1,5 @@
 //! Platform detection and system trust-store command construction for the
-//! Bulwark CA certificate.
+//! Forculus CA certificate.
 //!
 //! Command construction is separated from execution so that unit tests can
 //! verify the correct program and arguments without running privileged
@@ -92,10 +92,10 @@ pub struct TrustCommand {
 }
 
 /// The well-known destination path on Debian-family systems.
-const DEBIAN_CERT_PATH: &str = "/usr/local/share/ca-certificates/bulwark-ca.crt";
+const DEBIAN_CERT_PATH: &str = "/usr/local/share/ca-certificates/forculus-ca.crt";
 
 /// The well-known destination path on RHEL-family systems.
-const REDHAT_CERT_PATH: &str = "/etc/pki/ca-trust/source/anchors/bulwark-ca.crt";
+const REDHAT_CERT_PATH: &str = "/etc/pki/ca-trust/source/anchors/forculus-ca.crt";
 
 /// Construct the command(s) to install the CA certificate into the system
 /// trust store. Returns an error for unsupported platforms.
@@ -228,7 +228,7 @@ pub fn execute_trust_command(mut trust_cmd: TrustCommand) -> Result<(), String> 
 /// Format a command execution error with actionable guidance.
 fn format_exec_error(e: &std::io::Error) -> String {
     if e.kind() == std::io::ErrorKind::PermissionDenied {
-        "Permission denied. Try running with sudo:\n  sudo bulwark ca install".to_string()
+        "Permission denied. Try running with sudo:\n  sudo forculus ca install".to_string()
     } else if e.kind() == std::io::ErrorKind::NotFound {
         format!(
             "Required command not found: {e}\n\
@@ -248,7 +248,7 @@ fn suggest_sudo(stderr: &str) -> String {
         || lower.contains("eacces")
     {
         format!(
-            "{}\n\nPermission denied. Try running with sudo:\n  sudo bulwark ca install",
+            "{}\n\nPermission denied. Try running with sudo:\n  sudo forculus ca install",
             stderr.trim()
         )
     } else {

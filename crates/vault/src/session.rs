@@ -1,6 +1,6 @@
 //! Session token creation, validation, and persistence.
 //!
-//! Sessions are the mechanism by which agents authenticate to Bulwark.
+//! Sessions are the mechanism by which agents authenticate to Forculus.
 //! An operator creates a session with specific scope, receives a token,
 //! and gives it to the agent.
 //!
@@ -12,7 +12,7 @@ use std::path::Path;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// A Bulwark session.
+/// A Forculus session.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
     /// Unique session ID (UUID).
@@ -77,10 +77,10 @@ impl SessionStore {
     ///
     /// `pepper` is a 32-byte key derived from the vault master key, used for
     /// keyed blake3 hashing of session tokens.
-    pub fn open(path: &Path, pepper: [u8; 32]) -> bulwark_common::Result<Self> {
+    pub fn open(path: &Path, pepper: [u8; 32]) -> forculus_common::Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!(
+                forculus_common::ForculusError::Vault(format!(
                     "failed to create directory {}: {e}",
                     parent.display()
                 ))
@@ -88,7 +88,7 @@ impl SessionStore {
         }
 
         let db = rusqlite::Connection::open(path).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("failed to open sessions database: {e}"))
+            forculus_common::ForculusError::Vault(format!("failed to open sessions database: {e}"))
         })?;
 
         let store = Self { db, pepper };
@@ -104,7 +104,7 @@ impl SessionStore {
     }
 
     /// Initialize or migrate the database schema.
-    fn init_schema(&self) -> bulwark_common::Result<()> {
+    fn init_schema(&self) -> forculus_common::Result<()> {
         let table_exists: bool = self
             .db
             .query_row(
@@ -142,14 +142,14 @@ impl SessionStore {
             .db
             .prepare("SELECT id, token FROM sessions")
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("migration read error: {e}"))
+                forculus_common::ForculusError::Vault(format!("migration read error: {e}"))
             })?;
         let rows: Vec<(String, String)> = stmt
             .query_map([], |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
             })
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("migration query error: {e}"))
+                forculus_common::ForculusError::Vault(format!("migration query error: {e}"))
             })?
             .filter_map(|r| r.ok())
             .collect();
@@ -158,7 +158,7 @@ impl SessionStore {
         self.db
             .execute_batch("ALTER TABLE sessions RENAME TO sessions_old;")
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("migration rename error: {e}"))
+                forculus_common::ForculusError::Vault(format!("migration rename error: {e}"))
             })?;
 
         self.create_table()?;
@@ -173,14 +173,14 @@ impl SessionStore {
                     rusqlite::params![id, hash, id],
                 )
                 .map_err(|e| {
-                    bulwark_common::BulwarkError::Vault(format!("migration copy error: {e}"))
+                    forculus_common::ForculusError::Vault(format!("migration copy error: {e}"))
                 })?;
         }
 
         self.db
             .execute_batch("DROP TABLE sessions_old;")
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("migration cleanup error: {e}"))
+                forculus_common::ForculusError::Vault(format!("migration cleanup error: {e}"))
             })?;
 
         tracing::info!("migrated {} sessions to hashed tokens", rows.len());
@@ -188,7 +188,7 @@ impl SessionStore {
     }
 
     /// Create the sessions table with the current schema.
-    fn create_table(&self) -> bulwark_common::Result<()> {
+    fn create_table(&self) -> forculus_common::Result<()> {
         self.db
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS sessions (
@@ -207,16 +207,16 @@ impl SessionStore {
                 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);",
             )
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("failed to create sessions table: {e}"))
+                forculus_common::ForculusError::Vault(format!("failed to create sessions table: {e}"))
             })
     }
 
     /// Create a new session. Returns the session with its generated token.
     ///
     /// The raw token is returned exactly once — only the hash is persisted.
-    pub fn create(&self, params: CreateSessionParams) -> bulwark_common::Result<Session> {
+    pub fn create(&self, params: CreateSessionParams) -> forculus_common::Result<Session> {
         if params.operator.trim().is_empty() {
-            return Err(bulwark_common::BulwarkError::Vault(
+            return Err(forculus_common::ForculusError::Vault(
                 "operator must not be empty".into(),
             ));
         }
@@ -263,7 +263,7 @@ impl SessionStore {
                 ],
             )
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("failed to create session: {e}"))
+                forculus_common::ForculusError::Vault(format!("failed to create session: {e}"))
             })?;
 
         Ok(session)
@@ -273,7 +273,7 @@ impl SessionStore {
     ///
     /// Returns `None` for invalid, expired, or revoked tokens (no distinction
     /// to prevent token enumeration).
-    pub fn validate(&self, token: &str) -> bulwark_common::Result<Option<Session>> {
+    pub fn validate(&self, token: &str) -> forculus_common::Result<Option<Session>> {
         // Runtime validation: reject tokens with obviously wrong format early.
         if !token.starts_with("bwk_sess_") {
             return Ok(None);
@@ -320,14 +320,14 @@ impl SessionStore {
                 Ok(Some(session))
             }
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(bulwark_common::BulwarkError::Vault(format!(
+            Err(e) => Err(forculus_common::ForculusError::Vault(format!(
                 "session lookup error: {e}"
             ))),
         }
     }
 
     /// List all sessions.
-    pub fn list(&self, include_revoked: bool) -> bulwark_common::Result<Vec<Session>> {
+    pub fn list(&self, include_revoked: bool) -> forculus_common::Result<Vec<Session>> {
         let query = if include_revoked {
             "SELECT id, token_hash, operator, team, project, environment, agent_type, created_at, expires_at, revoked, description FROM sessions ORDER BY created_at DESC"
         } else {
@@ -335,7 +335,7 @@ impl SessionStore {
         };
 
         let mut stmt = self.db.prepare(query).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("failed to prepare query: {e}"))
+            forculus_common::ForculusError::Vault(format!("failed to prepare query: {e}"))
         })?;
 
         let rows = stmt
@@ -354,19 +354,19 @@ impl SessionStore {
                     description: row.get(10)?,
                 })
             })
-            .map_err(|e| bulwark_common::BulwarkError::Vault(format!("session list error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Vault(format!("session list error: {e}")))?;
 
         let mut sessions = Vec::new();
         for row in rows {
             let row = row
-                .map_err(|e| bulwark_common::BulwarkError::Vault(format!("row read error: {e}")))?;
+                .map_err(|e| forculus_common::ForculusError::Vault(format!("row read error: {e}")))?;
             sessions.push(row.into_session()?);
         }
         Ok(sessions)
     }
 
     /// Revoke a session by ID.
-    pub fn revoke(&self, session_id: &str) -> bulwark_common::Result<()> {
+    pub fn revoke(&self, session_id: &str) -> forculus_common::Result<()> {
         let updated = self
             .db
             .execute(
@@ -374,11 +374,11 @@ impl SessionStore {
                 rusqlite::params![session_id],
             )
             .map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("failed to revoke session: {e}"))
+                forculus_common::ForculusError::Vault(format!("failed to revoke session: {e}"))
             })?;
 
         if updated == 0 {
-            return Err(bulwark_common::BulwarkError::Vault(format!(
+            return Err(forculus_common::ForculusError::Vault(format!(
                 "session not found: {session_id}"
             )));
         }
@@ -386,7 +386,7 @@ impl SessionStore {
     }
 
     /// Clean up expired sessions (delete from DB). Returns the number of rows deleted.
-    pub fn cleanup_expired(&self) -> bulwark_common::Result<u64> {
+    pub fn cleanup_expired(&self) -> forculus_common::Result<u64> {
         let now = Utc::now().to_rfc3339();
         let count = self
             .db
@@ -394,7 +394,7 @@ impl SessionStore {
                 "DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at < ?1",
                 rusqlite::params![now],
             )
-            .map_err(|e| bulwark_common::BulwarkError::Vault(format!("cleanup error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Vault(format!("cleanup error: {e}")))?;
         Ok(count as u64)
     }
 }
@@ -416,9 +416,9 @@ struct SessionRow {
 }
 
 impl SessionRow {
-    fn into_session(self) -> bulwark_common::Result<Session> {
+    fn into_session(self) -> forculus_common::Result<Session> {
         let created_at = DateTime::parse_from_rfc3339(&self.created_at)
-            .map_err(|e| bulwark_common::BulwarkError::Vault(format!("invalid created_at: {e}")))?
+            .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid created_at: {e}")))?
             .with_timezone(&Utc);
 
         let expires_at = self
@@ -427,7 +427,7 @@ impl SessionRow {
                 DateTime::parse_from_rfc3339(&s)
                     .map(|dt| dt.with_timezone(&Utc))
                     .map_err(|e| {
-                        bulwark_common::BulwarkError::Vault(format!("invalid expires_at: {e}"))
+                        forculus_common::ForculusError::Vault(format!("invalid expires_at: {e}"))
                     })
             })
             .transpose()?;

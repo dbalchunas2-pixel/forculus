@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::Deserialize;
 
 /// The output of successful authentication. Contains everything needed
-/// to create a Bulwark session. The caller (management server or CLI)
+/// to create a Forculus session. The caller (management server or CLI)
 /// is responsible for actually creating the session via the Vault.
 #[derive(Debug, Clone)]
 pub struct MappedClaims {
@@ -26,7 +26,7 @@ pub struct MappedClaims {
     pub provider_subject_hash: String,
 }
 
-/// Maps IdP group names to Bulwark session fields.
+/// Maps IdP group names to Forculus session fields.
 #[derive(Debug, Clone, Default)]
 pub struct GroupMapping {
     mappings: HashMap<String, GroupMappingEntry>,

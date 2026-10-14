@@ -1,9 +1,9 @@
-//! `bulwark status` — health dashboard showing the state of all subsystems.
+//! `forculus status` — health dashboard showing the state of all subsystems.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_config::load_config;
+use forculus_config::load_config;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -67,8 +67,8 @@ fn build_report(config_path: &Path) -> Result<StatusReport> {
     // Policies.
     let policies_dir = Path::new(&config.policy.policies_dir);
     let (file_count, rule_count, policy_errors) = if policies_dir.exists() {
-        let result = bulwark_policy::validation::validate_policies(policies_dir);
-        let engine = bulwark_policy::engine::PolicyEngine::from_directory(policies_dir);
+        let result = forculus_policy::validation::validate_policies(policies_dir);
+        let engine = forculus_policy::engine::PolicyEngine::from_directory(policies_dir);
         let rules = engine.map(|e| e.rule_count()).unwrap_or(0);
         let files = std::fs::read_dir(policies_dir)
             .map(|entries| {
@@ -88,7 +88,7 @@ fn build_report(config_path: &Path) -> Result<StatusReport> {
     };
 
     // Credentials.
-    let creds_dir = bulwark_config::expand_tilde(&config.vault.credentials_dir);
+    let creds_dir = forculus_config::expand_tilde(&config.vault.credentials_dir);
     let cred_count = if Path::new(&creds_dir).exists() {
         std::fs::read_dir(&creds_dir)
             .map(|entries| {
@@ -103,7 +103,7 @@ fn build_report(config_path: &Path) -> Result<StatusReport> {
     };
 
     // Sessions.
-    let active_sessions = match bulwark_vault::store::Vault::open(&config.vault) {
+    let active_sessions = match forculus_vault::store::Vault::open(&config.vault) {
         Ok(vault) => vault
             .list_sessions(false)
             .map(|sessions| {
@@ -117,12 +117,12 @@ fn build_report(config_path: &Path) -> Result<StatusReport> {
     };
 
     // Audit.
-    let audit_db = bulwark_config::expand_tilde(&config.audit.db_path);
+    let audit_db = forculus_config::expand_tilde(&config.audit.db_path);
     let (event_count, chain_valid) = if Path::new(&audit_db).exists() {
-        match bulwark_audit::store::AuditStore::open(Path::new(&audit_db)) {
+        match forculus_audit::store::AuditStore::open(Path::new(&audit_db)) {
             Ok(store) => {
                 let count = store
-                    .count(&bulwark_audit::query::AuditFilter::default())
+                    .count(&forculus_audit::query::AuditFilter::default())
                     .unwrap_or(0);
                 let valid = store.verify_chain().ok().map(|v| v.valid);
                 (count, valid)
@@ -136,7 +136,7 @@ fn build_report(config_path: &Path) -> Result<StatusReport> {
     // Inspection.
     let inspect_config = &config.inspect;
     let inspection_rule_count =
-        bulwark_inspect::scanner::ContentScanner::from_config(inspect_config)
+        forculus_inspect::scanner::ContentScanner::from_config(inspect_config)
             .map(|s| s.rule_set().enabled_count())
             .unwrap_or(0);
 
@@ -183,7 +183,7 @@ pub fn run(config_path: &Path, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("Bulwark Status");
+    println!("Forculus Status");
     println!("{}\n", "=".repeat(40));
 
     println!("Configuration: {}", report.config_path);
@@ -294,7 +294,7 @@ audit:
             sessions_db = dir.join("sessions.db").display(),
             audit_db = dir.join("audit.db").display(),
         );
-        let config_path = dir.join("bulwark.yaml");
+        let config_path = dir.join("forculus.yaml");
         std::fs::write(&config_path, config).unwrap();
         config_path
     }

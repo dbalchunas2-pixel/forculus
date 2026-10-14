@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Bulwark is configured via a YAML file (typically `bulwark.yaml` or `/etc/bulwark/config.yaml`). This document describes all available configuration options.
+Forculus is configured via a YAML file (typically `forculus.yaml` or `/etc/forculus/config.yaml`). This document describes all available configuration options.
 
 ## Table of Contents
 
@@ -18,21 +18,21 @@ Bulwark is configured via a YAML file (typically `bulwark.yaml` or `/etc/bulwark
 
 ## Configuration File Location
 
-Bulwark searches for configuration in this order:
+Forculus searches for configuration in this order:
 
-1. Path specified via `--config` flag: `bulwark --config /path/to/config.yaml`
-2. `./bulwark.yaml` (current directory)
-3. `/etc/bulwark/bulwark.yaml` (system-wide)
+1. Path specified via `--config` flag: `forculus --config /path/to/config.yaml`
+2. `./forculus.yaml` (current directory)
+3. `/etc/forculus/forculus.yaml` (system-wide)
 
 ## Proxy
 
-The proxy section configures Bulwark's HTTP/HTTPS forward proxy with TLS MITM capabilities.
+The proxy section configures Forculus's HTTP/HTTPS forward proxy with TLS MITM capabilities.
 
 ```yaml
 proxy:
   listen_address: "127.0.0.1:8080"
   tls:
-    ca_dir: "/etc/bulwark/ca"
+    ca_dir: "/etc/forculus/ca"
   tool_mappings:
     - url_pattern: "https://api.github.com/*"
       tool: "github:api"
@@ -54,13 +54,13 @@ The `tls.ca_dir` directory must contain:
 - `ca.crt` - CA certificate in PEM format
 - `ca.key` - CA private key in PEM format
 
-Bulwark uses this CA to generate certificates on-the-fly for intercepted HTTPS connections. Clients must trust this CA certificate.
+Forculus uses this CA to generate certificates on-the-fly for intercepted HTTPS connections. Clients must trust this CA certificate.
 
 To generate a CA:
 
 ```bash
 openssl req -x509 -newkey rsa:4096 -keyout ca.key -out ca.crt \
-  -days 365 -nodes -subj "/CN=Bulwark CA"
+  -days 365 -nodes -subj "/CN=Forculus CA"
 ```
 
 ### Tool Mappings
@@ -122,12 +122,12 @@ logging:
 
 **Text format** (default):
 ```
-2026-02-15T10:30:45Z INFO bulwark::proxy: Request allowed tool=github:api action=read
+2026-02-15T10:30:45Z INFO forculus::proxy: Request allowed tool=github:api action=read
 ```
 
 **JSON format**:
 ```json
-{"timestamp":"2026-02-15T10:30:45Z","level":"INFO","target":"bulwark::proxy","message":"Request allowed","tool":"github:api","action":"read"}
+{"timestamp":"2026-02-15T10:30:45Z","level":"INFO","target":"forculus::proxy","message":"Request allowed","tool":"github:api","action":"read"}
 ```
 
 Use JSON format when integrating with log aggregation systems (ELK, Splunk, etc.).
@@ -173,7 +173,7 @@ Configure the policy engine:
 
 ```yaml
 policy:
-  policies_dir: "/etc/bulwark/policies"
+  policies_dir: "/etc/forculus/policies"
   hot_reload: true
 ```
 
@@ -187,7 +187,7 @@ policy:
 ### Policy Directory Structure
 
 ```
-/etc/bulwark/policies/
+/etc/forculus/policies/
 ├── 00-global.yaml
 ├── 10-team-engineering.yaml
 ├── 20-project-frontend.yaml
@@ -205,10 +205,10 @@ Configure the credential vault for secure credential storage and session managem
 
 ```yaml
 vault:
-  key_path: "/etc/bulwark/vault.key"
-  credentials_dir: "/etc/bulwark/credentials"
-  bindings_path: "/etc/bulwark/bindings.yaml"
-  sessions_db_path: "/var/lib/bulwark/sessions.db"
+  key_path: "/etc/forculus/vault.key"
+  credentials_dir: "/etc/forculus/credentials"
+  bindings_path: "/etc/forculus/bindings.yaml"
+  sessions_db_path: "/var/lib/forculus/sessions.db"
   require_sessions: true
 ```
 
@@ -227,7 +227,7 @@ vault:
 Credentials are stored as age-encrypted files with metadata sidecars:
 
 ```
-/etc/bulwark/credentials/
+/etc/forculus/credentials/
 ├── github-token.age           # Encrypted credential data
 ├── github-token.meta.json     # Metadata (name, description, tags)
 ├── slack-webhook.age
@@ -263,7 +263,7 @@ When `require_sessions` is enabled, all requests must include a valid session to
 
 ```bash
 # HTTP Proxy
-curl -H "X-Bulwark-Session: bwk_sess_abc123..." https://api.github.com/user
+curl -H "X-Forculus-Session: bwk_sess_abc123..." https://api.github.com/user
 
 # MCP Gateway (session stored per connection)
 ```
@@ -277,7 +277,7 @@ Configure audit logging for compliance and security monitoring:
 ```yaml
 audit:
   enabled: true
-  db_path: "/var/lib/bulwark/audit.db"
+  db_path: "/var/lib/forculus/audit.db"
   retention_days: 90
 ```
 
@@ -291,7 +291,7 @@ audit:
 
 ### Audit Log Contents
 
-When enabled, Bulwark logs all policy decisions to a SQLite database:
+When enabled, Forculus logs all policy decisions to a SQLite database:
 
 - Timestamp
 - Tool and action requested
@@ -341,7 +341,7 @@ inspect:
 
 ### Built-in Detection Rules
 
-Bulwark includes detectors for:
+Forculus includes detectors for:
 
 - **Secrets**: API keys, tokens, private keys, passwords
   - AWS keys, GitHub tokens, Slack tokens, JWT tokens
@@ -484,13 +484,13 @@ Cost tracking helps:
 Here's a comprehensive configuration demonstrating all sections:
 
 ```yaml
-# Bulwark Configuration
-# /etc/bulwark/bulwark.yaml
+# Forculus Configuration
+# /etc/forculus/forculus.yaml
 
 proxy:
   listen_address: "0.0.0.0:8080"
   tls:
-    ca_dir: "/etc/bulwark/ca"
+    ca_dir: "/etc/forculus/ca"
   tool_mappings:
     - url_pattern: "https://api.github.com/*"
       tool: "github:api"
@@ -528,19 +528,19 @@ mcp_gateway:
         DATABASE_URL: "${DATABASE_URL}"
 
 policy:
-  policies_dir: "/etc/bulwark/policies"
+  policies_dir: "/etc/forculus/policies"
   hot_reload: true
 
 vault:
-  key_path: "/etc/bulwark/vault.key"
-  credentials_dir: "/etc/bulwark/credentials"
-  bindings_path: "/etc/bulwark/bindings.yaml"
-  sessions_db_path: "/var/lib/bulwark/sessions.db"
+  key_path: "/etc/forculus/vault.key"
+  credentials_dir: "/etc/forculus/credentials"
+  bindings_path: "/etc/forculus/bindings.yaml"
+  sessions_db_path: "/var/lib/forculus/sessions.db"
   require_sessions: true
 
 audit:
   enabled: true
-  db_path: "/var/lib/bulwark/audit.db"
+  db_path: "/var/lib/forculus/audit.db"
   retention_days: 90
 
 inspect:
@@ -621,21 +621,21 @@ This allows sensitive values to be stored outside the configuration file.
 
 ## Configuration Validation
 
-Bulwark validates configuration on startup:
+Forculus validates configuration on startup:
 
 - Required fields must be present
 - Paths must exist and be accessible
 - Enum values must be valid
 - Numeric values must be in valid ranges
 
-Invalid configuration causes Bulwark to exit with an error message describing the problem.
+Invalid configuration causes Forculus to exit with an error message describing the problem.
 
 ## Best Practices
 
 1. **Separate environments**: Use different configuration files for dev, staging, and production
 2. **Version control**: Keep configuration in git (except secrets)
 3. **Environment variables**: Use `${VAR}` interpolation for secrets and environment-specific values
-4. **Minimal permissions**: Run Bulwark as a dedicated user with minimal file system access
+4. **Minimal permissions**: Run Forculus as a dedicated user with minimal file system access
 5. **TLS security**: Protect CA private key with restrictive permissions (0600)
 6. **Audit retention**: Balance compliance requirements with storage costs
 7. **Rate limits**: Set conservative defaults and tune based on actual usage
@@ -654,7 +654,7 @@ Error: Configuration file not found
 **Solution**: Specify the config path explicitly:
 
 ```bash
-bulwark --config /etc/bulwark/bulwark.yaml
+forculus --config /etc/forculus/forculus.yaml
 ```
 
 ### Invalid YAML Syntax
@@ -666,20 +666,20 @@ Error: Failed to parse configuration: invalid YAML at line 42
 **Solution**: Validate YAML syntax:
 
 ```bash
-yamllint bulwark.yaml
+yamllint forculus.yaml
 ```
 
 ### Permission Denied
 
 ```
-Error: Permission denied: /etc/bulwark/ca/ca.key
+Error: Permission denied: /etc/forculus/ca/ca.key
 ```
 
-**Solution**: Ensure the Bulwark process has read access:
+**Solution**: Ensure the Forculus process has read access:
 
 ```bash
-chmod 600 /etc/bulwark/ca/ca.key
-chown bulwark:bulwark /etc/bulwark/ca/ca.key
+chmod 600 /etc/forculus/ca/ca.key
+chown forculus:forculus /etc/forculus/ca/ca.key
 ```
 
 ### Hot Reload Not Working
@@ -696,4 +696,4 @@ chown bulwark:bulwark /etc/bulwark/ca/ca.key
 Error: database is locked: sessions.db
 ```
 
-**Solution**: Only one Bulwark instance can access the session database. Ensure no other instances are running, or use a different database path per instance.
+**Solution**: Only one Forculus instance can access the session database. Ensure no other instances are running, or use a different database path per instance.

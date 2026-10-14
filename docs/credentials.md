@@ -1,6 +1,6 @@
 # Credential Management
 
-Bulwark provides a secure credential vault for managing API keys, tokens, and other secrets used by AI agents. Credentials are encrypted at rest using the age encryption standard and can be bound to specific tools and scopes.
+Forculus provides a secure credential vault for managing API keys, tokens, and other secrets used by AI agents. Credentials are encrypted at rest using the age encryption standard and can be bound to specific tools and scopes.
 
 ## Overview
 
@@ -14,11 +14,11 @@ The credential vault system consists of:
 
 ## Adding Credentials
 
-Use the `bulwark cred add` command to add a new credential:
+Use the `forculus cred add` command to add a new credential:
 
 ```bash
 # Add a GitHub token
-bulwark cred add github-token
+forculus cred add github-token
 
 # You'll be prompted for:
 # - Credential ID: github-token (suggested from argument)
@@ -37,10 +37,10 @@ bulwark cred add github-token
 
 ### Storage Format
 
-Credentials are stored in `~/.bulwark/vault/`:
+Credentials are stored in `~/.forculus/vault/`:
 
 ```
-~/.bulwark/vault/
+~/.forculus/vault/
 ├── github-token.age           # Encrypted credential
 ├── github-token.meta.json     # Metadata (created_at, type, etc.)
 ├── aws-key.age
@@ -63,7 +63,7 @@ The `.age` file contains the encrypted secret value. The `.meta.json` file conta
 
 ## Credential Bindings
 
-Bindings define which credentials are available to which tools. Edit `~/.bulwark/vault/bindings.yaml`:
+Bindings define which credentials are available to which tools. Edit `~/.forculus/vault/bindings.yaml`:
 
 ```yaml
 bindings:
@@ -108,10 +108,10 @@ bindings:
 For HTTP proxy mode, credentials are injected based on the request URL and tool mapping:
 
 ```yaml
-# In bulwark.yaml
+# In forculus.yaml
 vault:
   enabled: true
-  vault_dir: ~/.bulwark/vault
+  vault_dir: ~/.forculus/vault
 
 # Bindings map URLs to tools
 http:
@@ -120,7 +120,7 @@ http:
       tool_name: "github::api"
 ```
 
-When a request matches, Bulwark:
+When a request matches, Forculus:
 
 1. Looks up the tool name from the URL pattern
 2. Finds matching credential bindings
@@ -152,7 +152,7 @@ For MCP mode, credentials are injected into tool parameters or headers:
 }
 ```
 
-Bulwark injects the credential before forwarding to the MCP server:
+Forculus injects the credential before forwarding to the MCP server:
 
 ```json
 {
@@ -160,7 +160,7 @@ Bulwark injects the credential before forwarding to the MCP server:
   "arguments": {
     "repo": "owner/repo",
     "title": "Bug report",
-    "_bulwark_credential": "Bearer ghp_xxxxxxxxxxxxxxxxxxxx"
+    "_forculus_credential": "Bearer ghp_xxxxxxxxxxxxxxxxxxxx"
   }
 }
 ```
@@ -173,7 +173,7 @@ Sessions authenticate agents and track usage across requests.
 
 ```bash
 # Create a new session
-bulwark session create --operator alice
+forculus session create --operator alice
 
 # Output:
 # Session created: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
@@ -184,19 +184,19 @@ Session tokens have the format: `bwk_sess_` + 32 hexadecimal characters.
 
 ### Using Sessions
 
-Sessions are passed via the `X-Bulwark-Session` header:
+Sessions are passed via the `X-Forculus-Session` header:
 
 ```http
 GET /api/resource HTTP/1.1
 Host: api.example.com
-X-Bulwark-Session: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+X-Forculus-Session: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
 
 For MCP, configure the session token in the MCP client configuration.
 
 ### Session Storage
 
-Sessions are stored in SQLite: `~/.bulwark/vault/sessions.db`
+Sessions are stored in SQLite: `~/.forculus/vault/sessions.db`
 
 ```sql
 CREATE TABLE sessions (
@@ -215,7 +215,7 @@ Rotate credentials regularly to maintain security:
 
 ```bash
 # Update a credential's secret value
-bulwark cred rotate github-token
+forculus cred rotate github-token
 
 # You'll be prompted for the new secret value
 # The .age file is updated, metadata tracks rotation_count
@@ -230,20 +230,20 @@ bulwark cred rotate github-token
 
 ```bash
 # Check recent usage before rotating
-bulwark audit query --event-type CredentialInjected --credential github-token --since 7d
+forculus audit query --event-type CredentialInjected --credential github-token --since 7d
 
 # Rotate the credential
-bulwark cred rotate github-token
+forculus cred rotate github-token
 
 # Verify injection is working
-bulwark audit query --event-type CredentialInjected --credential github-token --since 5m
+forculus audit query --event-type CredentialInjected --credential github-token --since 5m
 ```
 
 ## Listing and Inspecting Credentials
 
 ```bash
 # List all credentials (shows metadata only, never secrets)
-bulwark cred list
+forculus cred list
 
 # Output:
 # ID              Type          Created              Last Used            Tags
@@ -252,7 +252,7 @@ bulwark cred list
 # slack-webhook   custom        2026-02-01 08:15    Never               slack
 
 # Show details for a specific credential
-bulwark cred show github-token
+forculus cred show github-token
 
 # Output includes bindings, usage stats, and metadata
 ```
@@ -261,7 +261,7 @@ bulwark cred show github-token
 
 ```bash
 # Delete a credential and its metadata
-bulwark cred delete github-token
+forculus cred delete github-token
 
 # Confirmation required
 # This removes the .age file and .meta.json file
@@ -282,16 +282,16 @@ Complete example of setting up credentials for a GitHub integration:
 
 ```bash
 # 1. Create a session for the operator
-bulwark session create --operator alice
+forculus session create --operator alice
 # Save token: bwk_sess_abc123...
 
 # 2. Add GitHub credential
-bulwark cred add github-token
+forculus cred add github-token
 # Type: bearer_token
 # Secret: ghp_your_github_token_here
 
 # 3. Edit bindings
-cat >> ~/.bulwark/vault/bindings.yaml <<EOF
+cat >> ~/.forculus/vault/bindings.yaml <<EOF
 bindings:
   - credential_id: github-token
     tools:
@@ -305,11 +305,11 @@ EOF
 
 # 4. Test the integration
 curl -x http://localhost:8080 \
-  -H "X-Bulwark-Session: bwk_sess_abc123..." \
+  -H "X-Forculus-Session: bwk_sess_abc123..." \
   https://api.github.com/user/repos
 
 # 5. Check audit logs
-bulwark audit query --event-type CredentialInjected --since 1h
+forculus audit query --event-type CredentialInjected --since 1h
 ```
 
 ## Troubleshooting
@@ -318,8 +318,8 @@ bulwark audit query --event-type CredentialInjected --since 1h
 
 If credential injection fails, check:
 
-1. Credential file exists: `ls ~/.bulwark/vault/github-token.age`
-2. Binding is configured: `cat ~/.bulwark/vault/bindings.yaml`
+1. Credential file exists: `ls ~/.forculus/vault/github-token.age`
+2. Binding is configured: `cat ~/.forculus/vault/bindings.yaml`
 3. Tool pattern matches: Use `*` for debugging, then tighten
 4. Operator is allowed: Check `operators` field in binding
 
@@ -329,14 +329,14 @@ If credential is found but not injected:
 
 1. Check scopes in binding match required scopes
 2. Verify operator ID matches session operator
-3. Check rate limits: `bulwark cred show <id>` for usage stats
-4. Review audit logs: `bulwark audit query --event-type PolicyDecision`
+3. Check rate limits: `forculus cred show <id>` for usage stats
+4. Review audit logs: `forculus audit query --event-type PolicyDecision`
 
 ### Session Invalid
 
 If session is rejected:
 
 1. Verify token format: `bwk_sess_` + 32 hex chars
-2. Check expiration: `bulwark session list`
+2. Check expiration: `forculus session list`
 3. Verify session exists: Query sessions.db directly if needed
 4. Create new session if expired

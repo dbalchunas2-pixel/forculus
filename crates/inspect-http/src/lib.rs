@@ -1,10 +1,10 @@
-//! Bulwark inspect-http — Tier 2 HTTP callout analyzers for content inspection.
+//! Forculus inspect-http — Tier 2 HTTP callout analyzers for content inspection.
 //!
-//! Extends the synchronous regex-based inspection in [`bulwark_inspect`] with
+//! Extends the synchronous regex-based inspection in [`forculus_inspect`] with
 //! async HTTP callouts to external analyzer services (ML classifiers, toxicity
 //! filters, domain-specific content policies).
 //!
-//! The core [`inspect`](bulwark_inspect) crate stays fully synchronous.  This
+//! The core [`inspect`](forculus_inspect) crate stays fully synchronous.  This
 //! crate adds the async HTTP callout logic in a separate layer that the proxy
 //! and MCP crates can call directly.
 #![forbid(unsafe_code)]
@@ -79,7 +79,7 @@ impl HttpAnalyzerPipeline {
         content_type: Option<&str>,
         session_id: Option<&str>,
         operator: Option<&str>,
-    ) -> Vec<bulwark_inspect::InspectionFinding> {
+    ) -> Vec<forculus_inspect::InspectionFinding> {
         let mut all_findings = Vec::new();
 
         for analyzer in &self.analyzers {
@@ -112,7 +112,7 @@ impl HttpAnalyzerPipeline {
         content_type: Option<&str>,
         session_id: Option<&str>,
         operator: Option<&str>,
-    ) -> Vec<bulwark_inspect::InspectionFinding> {
+    ) -> Vec<forculus_inspect::InspectionFinding> {
         // Check condition: content_type filter.
         if !analyzer.config.condition.content_types.is_empty() {
             let ct = content_type.unwrap_or("");
@@ -205,23 +205,23 @@ impl HttpAnalyzerPipeline {
     fn fail_behavior(
         &self,
         config: &HttpAnalyzerConfig,
-    ) -> Vec<bulwark_inspect::InspectionFinding> {
+    ) -> Vec<forculus_inspect::InspectionFinding> {
         match config.on_error {
             config::OnError::FailOpen => Vec::new(),
             config::OnError::FailClosed => {
-                vec![bulwark_inspect::InspectionFinding {
+                vec![forculus_inspect::InspectionFinding {
                     rule_id: format!("http-analyzer-{}-unavailable", config.name),
                     description: format!(
                         "HTTP analyzer '{}' is unavailable (fail_closed policy)",
                         config.name
                     ),
-                    severity: bulwark_inspect::Severity::High,
-                    category: bulwark_inspect::FindingCategory::Custom(
+                    severity: forculus_inspect::Severity::High,
+                    category: forculus_inspect::FindingCategory::Custom(
                         "analyzer_unavailable".to_string(),
                     ),
-                    location: bulwark_inspect::FindingLocation::Unknown,
+                    location: forculus_inspect::FindingLocation::Unknown,
                     snippet: None,
-                    action: bulwark_inspect::FindingAction::Block,
+                    action: forculus_inspect::FindingAction::Block,
                 }]
             }
         }
@@ -231,30 +231,30 @@ impl HttpAnalyzerPipeline {
 /// Convert analyzer protocol findings to inspection findings.
 fn convert_findings(
     findings: &[protocol::AnalyzerFinding],
-) -> Vec<bulwark_inspect::InspectionFinding> {
+) -> Vec<forculus_inspect::InspectionFinding> {
     findings
         .iter()
         .map(|f| {
             let severity = match f.severity.to_lowercase().as_str() {
-                "critical" => bulwark_inspect::Severity::Critical,
-                "high" => bulwark_inspect::Severity::High,
-                "medium" => bulwark_inspect::Severity::Medium,
-                "low" => bulwark_inspect::Severity::Low,
-                _ => bulwark_inspect::Severity::Info,
+                "critical" => forculus_inspect::Severity::Critical,
+                "high" => forculus_inspect::Severity::High,
+                "medium" => forculus_inspect::Severity::Medium,
+                "low" => forculus_inspect::Severity::Low,
+                _ => forculus_inspect::Severity::Info,
             };
 
             let action = match f.action.as_deref().unwrap_or("flag") {
-                "deny" | "block" => bulwark_inspect::FindingAction::Block,
-                "redact" => bulwark_inspect::FindingAction::Redact,
-                _ => bulwark_inspect::FindingAction::Log,
+                "deny" | "block" => forculus_inspect::FindingAction::Block,
+                "redact" => forculus_inspect::FindingAction::Redact,
+                _ => forculus_inspect::FindingAction::Log,
             };
 
-            bulwark_inspect::InspectionFinding {
+            forculus_inspect::InspectionFinding {
                 rule_id: format!("http-analyzer:{}", f.finding_type),
                 description: f.detail.clone().unwrap_or_else(|| f.finding_type.clone()),
                 severity,
-                category: bulwark_inspect::FindingCategory::Custom(f.finding_type.clone()),
-                location: bulwark_inspect::FindingLocation::Unknown,
+                category: forculus_inspect::FindingCategory::Custom(f.finding_type.clone()),
+                location: forculus_inspect::FindingLocation::Unknown,
                 snippet: None,
                 action,
             }
@@ -285,10 +285,10 @@ mod tests {
 
         let result = convert_findings(&findings);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].severity, bulwark_inspect::Severity::Critical);
-        assert_eq!(result[0].action, bulwark_inspect::FindingAction::Block);
-        assert_eq!(result[1].severity, bulwark_inspect::Severity::Low);
-        assert_eq!(result[1].action, bulwark_inspect::FindingAction::Log);
+        assert_eq!(result[0].severity, forculus_inspect::Severity::Critical);
+        assert_eq!(result[0].action, forculus_inspect::FindingAction::Block);
+        assert_eq!(result[1].severity, forculus_inspect::Severity::Low);
+        assert_eq!(result[1].action, forculus_inspect::FindingAction::Log);
     }
 
     #[test]
@@ -301,7 +301,7 @@ mod tests {
         }];
 
         let result = convert_findings(&findings);
-        assert_eq!(result[0].action, bulwark_inspect::FindingAction::Redact);
+        assert_eq!(result[0].action, forculus_inspect::FindingAction::Redact);
     }
 
     #[test]

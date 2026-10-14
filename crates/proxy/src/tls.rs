@@ -1,5 +1,5 @@
 //! TLS certificate authority generation, leaf-cert caching, and TLS connector
-//! configuration for the Bulwark proxy.
+//! configuration for the Forculus proxy.
 
 use std::sync::Arc;
 
@@ -14,7 +14,7 @@ use rustls::server::ResolvesServerCert;
 use rustls::sign::CertifiedKey;
 use tokio_rustls::TlsConnector;
 
-use bulwark_config::expand_tilde;
+use forculus_config::expand_tilde;
 
 /// Shared TLS state: the CA identity, a leaf-cert cache, and an outbound TLS
 /// connector using system root certificates.
@@ -42,14 +42,14 @@ impl std::fmt::Debug for TlsState {
 impl TlsState {
     /// Build TLS state: load or generate a CA, set up the leaf-cert cache,
     /// and prepare the outbound TLS connector.
-    pub fn new(ca_dir: &str) -> bulwark_common::Result<Self> {
+    pub fn new(ca_dir: &str) -> forculus_common::Result<Self> {
         // Ensure the aws-lc-rs crypto provider is installed (needed when
         // multiple rustls backends are present, e.g. in tests with reqwest).
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 
         let ca_dir = expand_tilde(ca_dir);
         std::fs::create_dir_all(&ca_dir).map_err(|e| {
-            bulwark_common::BulwarkError::Tls(format!("cannot create CA directory: {e}"))
+            forculus_common::ForculusError::Tls(format!("cannot create CA directory: {e}"))
         })?;
 
         let cert_path = std::path::Path::new(&ca_dir).join("ca.pem");
@@ -138,14 +138,14 @@ impl ResolvesServerCert for TlsState {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-fn generate_ca() -> bulwark_common::Result<(rcgen::Certificate, KeyPair, CertificateDer<'static>)> {
+fn generate_ca() -> forculus_common::Result<(rcgen::Certificate, KeyPair, CertificateDer<'static>)> {
     let key = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("CA key generation failed: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("CA key generation failed: {e}")))?;
 
     let mut params = CertificateParams::default();
     params
         .distinguished_name
-        .push(DnType::CommonName, "Bulwark Local CA");
+        .push(DnType::CommonName, "Forculus Local CA");
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
     params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
 
@@ -155,7 +155,7 @@ fn generate_ca() -> bulwark_common::Result<(rcgen::Certificate, KeyPair, Certifi
 
     let cert = params
         .self_signed(&key)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("CA self-sign failed: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("CA self-sign failed: {e}")))?;
     let der = CertificateDer::from(cert.der().to_vec());
 
     Ok((cert, key, der))
@@ -164,16 +164,16 @@ fn generate_ca() -> bulwark_common::Result<(rcgen::Certificate, KeyPair, Certifi
 fn load_ca(
     cert_path: &std::path::Path,
     key_path: &std::path::Path,
-) -> bulwark_common::Result<(rcgen::Certificate, KeyPair, CertificateDer<'static>)> {
+) -> forculus_common::Result<(rcgen::Certificate, KeyPair, CertificateDer<'static>)> {
     let cert_pem = std::fs::read_to_string(cert_path)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("read CA cert: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("read CA cert: {e}")))?;
     let key_pem = std::fs::read_to_string(key_path)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("read CA key: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("read CA key: {e}")))?;
 
     let key = KeyPair::from_pem(&key_pem)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("parse CA key: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("parse CA key: {e}")))?;
     let params = CertificateParams::from_ca_cert_pem(&cert_pem)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("parse CA cert: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("parse CA cert: {e}")))?;
 
     // Read the original DER bytes from disk (for the cert chain).
     let cert_der = pem_to_der(&cert_pem)?;
@@ -183,21 +183,21 @@ fn load_ca(
     // object will validate against the original CA cert from disk.
     let ca_cert = params
         .self_signed(&key)
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("CA re-sign failed: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("CA re-sign failed: {e}")))?;
 
     tracing::info!(?cert_path, "loaded existing CA");
     Ok((ca_cert, key, cert_der))
 }
 
-fn pem_to_der(pem_str: &str) -> bulwark_common::Result<CertificateDer<'static>> {
+fn pem_to_der(pem_str: &str) -> forculus_common::Result<CertificateDer<'static>> {
     let mut reader = std::io::BufReader::new(pem_str.as_bytes());
     let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut reader)
         .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("PEM decode: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("PEM decode: {e}")))?;
     certs
         .into_iter()
         .next()
-        .ok_or_else(|| bulwark_common::BulwarkError::Tls("no certificate in PEM".to_string()))
+        .ok_or_else(|| forculus_common::ForculusError::Tls("no certificate in PEM".to_string()))
 }
 
 fn write_ca(
@@ -205,26 +205,26 @@ fn write_ca(
     key_path: &std::path::Path,
     cert: &rcgen::Certificate,
     key: &KeyPair,
-) -> bulwark_common::Result<()> {
+) -> forculus_common::Result<()> {
     use std::io::Write;
 
     // Write cert PEM (rcgen provides this when pem feature is enabled).
     let cert_pem = cert.pem();
     std::fs::File::create(cert_path)
         .and_then(|mut f| f.write_all(cert_pem.as_bytes()))
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("write CA cert: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("write CA cert: {e}")))?;
 
     // Write key PEM.
     let key_pem = key.serialize_pem();
     std::fs::File::create(key_path)
         .and_then(|mut f| f.write_all(key_pem.as_bytes()))
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("write CA key: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("write CA key: {e}")))?;
 
     tracing::info!(?cert_path, "generated new CA");
     Ok(())
 }
 
-fn build_server_connector() -> bulwark_common::Result<TlsConnector> {
+fn build_server_connector() -> forculus_common::Result<TlsConnector> {
     let mut roots = rustls::RootCertStore::empty();
     for cert in rustls_native_certs::load_native_certs().certs {
         // Ignore individual cert errors — some system certs may be malformed.

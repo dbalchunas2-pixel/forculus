@@ -1,4 +1,4 @@
-//! Bulwark audit — structured event logging and persistence.
+//! Forculus audit — structured event logging and persistence.
 //!
 //! Provides a fire-and-forget [`logger::AuditLogger`] backed by SQLite for
 //! recording every tool call, policy decision, and credential injection.

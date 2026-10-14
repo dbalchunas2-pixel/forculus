@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Example HTTP callout analyzer for Bulwark.
+Example HTTP callout analyzer for Forculus.
 
 This analyzer echoes back any findings it detects in the request body.
-It demonstrates the Bulwark analyzer protocol:
+It demonstrates the Forculus analyzer protocol:
 - Receives POST /analyze with JSON body
 - Returns findings in the standard format
 
@@ -11,7 +11,7 @@ Usage:
     pip install flask
     python main.py
 
-Configure in bulwark.yaml:
+Configure in forculus.yaml:
     inspect:
       http_analyzers:
         - name: echo-analyzer

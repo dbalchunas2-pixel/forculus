@@ -53,7 +53,7 @@ pub fn session_required() -> Response<BoxBody> {
         StatusCode::UNAUTHORIZED,
         &ErrorBody {
             error: "session_required".into(),
-            message: "Session token required. Set X-Bulwark-Session header.".into(),
+            message: "Session token required. Set X-Forculus-Session header.".into(),
             details: None,
             governance: None,
         },
@@ -75,7 +75,7 @@ pub fn session_invalid() -> Response<BoxBody> {
 
 /// 403 — policy evaluation denied the request.
 pub fn policy_denied(
-    eval: &bulwark_policy::verdict::PolicyEvaluation,
+    eval: &forculus_policy::verdict::PolicyEvaluation,
     tool: &str,
     action: &str,
 ) -> Response<BoxBody> {
@@ -217,11 +217,11 @@ mod tests {
 
     #[tokio::test]
     async fn policy_denied_includes_governance() {
-        let eval = bulwark_policy::verdict::PolicyEvaluation {
-            verdict: bulwark_policy::verdict::Verdict::Deny,
+        let eval = forculus_policy::verdict::PolicyEvaluation {
+            verdict: forculus_policy::verdict::Verdict::Deny,
             matched_rule: Some("block-destructive".into()),
             matched_policy: Some("prod-guard.yaml".into()),
-            scope: bulwark_policy::verdict::PolicyScope::Project,
+            scope: forculus_policy::verdict::PolicyScope::Project,
             reason: "destructive ops blocked".into(),
             evaluation_time: std::time::Duration::from_micros(50),
         };

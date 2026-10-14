@@ -1,10 +1,10 @@
 # Codex Integration
 
-Codex is an AI agent for software development that operates through HTTP APIs. Bulwark integrates with Codex via the HTTP forward proxy to add governance, policy enforcement, and audit logging.
+Codex is an AI agent for software development that operates through HTTP APIs. Forculus integrates with Codex via the HTTP forward proxy to add governance, policy enforcement, and audit logging.
 
 ## Overview
 
-Bulwark provides Codex with:
+Forculus provides Codex with:
 
 - **Policy enforcement**: Control which APIs Codex can access
 - **Credential management**: Securely inject API keys and tokens
@@ -20,20 +20,20 @@ Codex Agent
     |
     | (HTTP/HTTPS proxy)
     |
-Bulwark HTTP Proxy
+Forculus HTTP Proxy
     |
     | (Policy, Credentials, Audit, Content Inspection)
     |
 External APIs (GitHub, Slack, AWS, etc.)
 ```
 
-Codex is configured to route all HTTP traffic through Bulwark's forward proxy, which enforces policies and injects credentials before forwarding to external APIs.
+Codex is configured to route all HTTP traffic through Forculus's forward proxy, which enforces policies and injects credentials before forwarding to external APIs.
 
 ## Configuration
 
-### 1. Configure Bulwark HTTP Proxy
+### 1. Configure Forculus HTTP Proxy
 
-Create or edit `~/.bulwark/bulwark.yaml`:
+Create or edit `~/.forculus/forculus.yaml`:
 
 ```yaml
 http:
@@ -43,8 +43,8 @@ http:
   # TLS MITM for HTTPS inspection
   tls:
     enabled: true
-    ca_cert: ~/.bulwark/ca/bulwark-ca.crt
-    ca_key: ~/.bulwark/ca/bulwark-ca.key
+    ca_cert: ~/.forculus/ca/forculus-ca.crt
+    ca_key: ~/.forculus/ca/forculus-ca.key
 
   # URL-to-tool mappings for policy enforcement
   tool_mappings:
@@ -73,17 +73,17 @@ http:
 # Enable policy enforcement
 policy:
   enabled: true
-  policy_file: ~/.bulwark/policies.yaml
+  policy_file: ~/.forculus/policies.yaml
 
 # Enable credential vault
 vault:
   enabled: true
-  vault_dir: ~/.bulwark/vault
+  vault_dir: ~/.forculus/vault
 
 # Enable audit logging
 audit:
   enabled: true
-  database_path: ~/.bulwark/audit/audit.db
+  database_path: ~/.forculus/audit/audit.db
 
 # Enable content inspection
 content_inspection:
@@ -94,38 +94,38 @@ content_inspection:
 
 ### 2. Generate TLS CA Certificate
 
-Bulwark needs a CA certificate to perform TLS MITM:
+Forculus needs a CA certificate to perform TLS MITM:
 
 ```bash
 # Generate CA certificate and key
-bulwark ca generate
+forculus ca generate
 
 # Output:
-# CA certificate: ~/.bulwark/ca/bulwark-ca.crt
-# CA key: ~/.bulwark/ca/bulwark-ca.key
+# CA certificate: ~/.forculus/ca/forculus-ca.crt
+# CA key: ~/.forculus/ca/forculus-ca.key
 #
 # Install the CA certificate in your system trust store:
-# macOS: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.bulwark/ca/bulwark-ca.crt
-# Linux: sudo cp ~/.bulwark/ca/bulwark-ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
-# Windows: certutil -addstore -f "ROOT" %USERPROFILE%\.bulwark\ca\bulwark-ca.crt
+# macOS: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.forculus/ca/forculus-ca.crt
+# Linux: sudo cp ~/.forculus/ca/forculus-ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+# Windows: certutil -addstore -f "ROOT" %USERPROFILE%\.forculus\ca\forculus-ca.crt
 ```
 
 Install the CA certificate in your system trust store using the command for your OS.
 
-### 3. Start Bulwark Proxy
+### 3. Start Forculus Proxy
 
 ```bash
 # Start the HTTP proxy
-bulwark proxy start
+forculus proxy start
 
 # Output:
-# Bulwark HTTP Proxy listening on 127.0.0.1:8080
-# TLS MITM enabled with CA: ~/.bulwark/ca/bulwark-ca.crt
+# Forculus HTTP Proxy listening on 127.0.0.1:8080
+# TLS MITM enabled with CA: ~/.forculus/ca/forculus-ca.crt
 ```
 
 ### 4. Configure Codex to Use Proxy
 
-Configure Codex to route all HTTP traffic through Bulwark:
+Configure Codex to route all HTTP traffic through Forculus:
 
 ```bash
 # Set proxy environment variables
@@ -151,7 +151,7 @@ Or in Codex configuration file:
 
 ```bash
 # Create a session for Codex
-bulwark session create --operator codex-agent
+forculus session create --operator codex-agent
 
 # Output:
 # Session created: bwk_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6
@@ -162,7 +162,7 @@ Configure Codex to send this token in requests:
 ```json
 {
   "headers": {
-    "X-Bulwark-Session": "bwk_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6"
+    "X-Forculus-Session": "bwk_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6"
   }
 }
 ```
@@ -171,24 +171,24 @@ Configure Codex to send this token in requests:
 
 ```bash
 # Add GitHub token
-bulwark cred add github-token
+forculus cred add github-token
 # Type: bearer_token
 # Secret: ghp_your_github_token_here
 
 # Add Slack token
-bulwark cred add slack-token
+forculus cred add slack-token
 # Type: bearer_token
 # Secret: xoxb-your-slack-token-here
 
 # Add AWS credentials
-bulwark cred add aws-key
+forculus cred add aws-key
 # Type: custom
 # Secret: {"access_key_id": "AKIAIOSFODNN7EXAMPLE", "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"}
 ```
 
 ### 7. Configure Credential Bindings
 
-Edit `~/.bulwark/vault/bindings.yaml`:
+Edit `~/.forculus/vault/bindings.yaml`:
 
 ```yaml
 bindings:
@@ -221,7 +221,7 @@ bindings:
 
 ### 8. Configure Policies
 
-Edit `~/.bulwark/policies.yaml`:
+Edit `~/.forculus/policies.yaml`:
 
 ```yaml
 policies:
@@ -337,7 +337,7 @@ tool_mappings:
 
 ## Credential Injection
 
-Bulwark automatically injects credentials based on tool mappings and bindings.
+Forculus automatically injects credentials based on tool mappings and bindings.
 
 ### Bearer Token Injection
 
@@ -408,7 +408,7 @@ For AWS credentials:
 }
 ```
 
-Bulwark calculates AWS Signature Version 4 and adds headers:
+Forculus calculates AWS Signature Version 4 and adds headers:
 
 ```http
 GET /bucket/object HTTP/1.1
@@ -419,16 +419,16 @@ X-Amz-Date: 20260215T103045Z
 
 ## Example Session
 
-Complete example of using Codex with Bulwark:
+Complete example of using Codex with Forculus:
 
 ### Setup
 
 ```bash
-# 1. Start Bulwark proxy
-bulwark proxy start
+# 1. Start Forculus proxy
+forculus proxy start
 
 # 2. Create session
-bulwark session create --operator codex-agent
+forculus session create --operator codex-agent
 # Token: bwk_sess_abc123...
 
 # 3. Configure Codex to use proxy and session token
@@ -436,7 +436,7 @@ export HTTP_PROXY=http://localhost:8080
 export HTTPS_PROXY=http://localhost:8080
 
 # 4. Start Codex
-codex start --header "X-Bulwark-Session: bwk_sess_abc123..."
+codex start --header "X-Forculus-Session: bwk_sess_abc123..."
 ```
 
 ### Interaction
@@ -446,9 +446,9 @@ Codex: Listing GitHub repositories...
 
 [HTTP Request]
 GET https://api.github.com/user/repos
-X-Bulwark-Session: bwk_sess_abc123...
+X-Forculus-Session: bwk_sess_abc123...
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Extract session: codex-agent
 2. Map URL to tool: github::api
 3. Check policy: allow (GET method)
@@ -467,12 +467,12 @@ Codex: Creating issue in repo1...
 
 [HTTP Request]
 POST https://api.github.com/user/repos/repo1/issues
-X-Bulwark-Session: bwk_sess_abc123...
+X-Forculus-Session: bwk_sess_abc123...
 Content-Type: application/json
 
 {"title": "Add login button", "body": "We need a login button"}
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Extract session: codex-agent
 2. Map URL to tool: github::create-issue
 3. Check policy: allow (require_approval: true)
@@ -480,33 +480,33 @@ Content-Type: application/json
 
 [HTTP Response]
 403 Forbidden
-X-Bulwark-Approval-Required: true
+X-Forculus-Approval-Required: true
 
 {
   "error": {
     "code": "approval_required",
     "message": "This operation requires approval",
-    "approval_url": "https://bulwark.local/approve?request_id=req_xyz"
+    "approval_url": "https://forculus.local/approve?request_id=req_xyz"
   }
 }
 
-Codex: Operation requires approval. Visit: https://bulwark.local/approve?request_id=req_xyz
+Codex: Operation requires approval. Visit: https://forculus.local/approve?request_id=req_xyz
 
 ---
 
-[User approves via Bulwark UI]
+[User approves via Forculus UI]
 
 Codex: Retrying after approval...
 
 [HTTP Request]
 POST https://api.github.com/user/repos/repo1/issues
-X-Bulwark-Session: bwk_sess_abc123...
-X-Bulwark-Approval-Token: appr_xyz
+X-Forculus-Session: bwk_sess_abc123...
+X-Forculus-Approval-Token: appr_xyz
 Content-Type: application/json
 
 {"title": "Add login button", "body": "We need a login button"}
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Verify approval token
 2. Inject credential: github-token
 3. Forward request
@@ -523,9 +523,9 @@ Codex: Deleting repository repo2...
 
 [HTTP Request]
 DELETE https://api.github.com/repos/owner/repo2
-X-Bulwark-Session: bwk_sess_abc123...
+X-Forculus-Session: bwk_sess_abc123...
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Map URL to tool: github::delete-repo
 2. Check policy: deny
 3. BLOCK
@@ -549,12 +549,12 @@ Codex: Posting to Slack...
 
 [HTTP Request]
 POST https://slack.com/api/chat.postMessage
-X-Bulwark-Session: bwk_sess_abc123...
+X-Forculus-Session: bwk_sess_abc123...
 Content-Type: application/json
 
 {"channel": "#general", "text": "Our AWS key is AKIAIOSFODNN7EXAMPLE"}
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Map URL to tool: slack::post-message
 2. Check policy: allow
 3. Content inspection: DETECT aws-key
@@ -581,7 +581,7 @@ All HTTP requests are logged:
 
 ```bash
 # View recent Codex activity
-bulwark audit query --operator codex-agent --since 1h
+forculus audit query --operator codex-agent --since 1h
 
 # Output:
 # 2026-02-15 10:30:00 | RequestProcessed | codex-agent | github::api | GET /user/repos | 200
@@ -639,7 +639,7 @@ The proxy adds latency. Monitor and optimize:
 
 ```bash
 # Check average response times
-bulwark audit export --event-type RequestProcessed --since 24h --output requests.jsonl
+forculus audit export --event-type RequestProcessed --since 24h --output requests.jsonl
 cat requests.jsonl | jq -r '.details.response_time_ms' | awk '{sum+=$1; count++} END {print "Average: " sum/count "ms"}'
 
 # Identify slow requests
@@ -652,7 +652,7 @@ Rotate the TLS CA certificate annually:
 
 ```bash
 # Generate new CA
-bulwark ca generate --force
+forculus ca generate --force
 
 # Install new CA in system trust store
 # Remove old CA from trust store
@@ -663,7 +663,7 @@ bulwark ca generate --force
 Add metadata to sessions for better audit trails:
 
 ```bash
-bulwark session create \
+forculus session create \
   --operator codex-agent \
   --metadata '{"env":"production","version":"1.2.3","hostname":"codex-prod-1"}'
 ```
@@ -675,8 +675,8 @@ bulwark session create \
 If Codex reports TLS certificate errors:
 
 1. Verify CA is installed in system trust store
-2. Check CA certificate path in `bulwark.yaml`
-3. Regenerate CA if corrupted: `bulwark ca generate --force`
+2. Check CA certificate path in `forculus.yaml`
+3. Regenerate CA if corrupted: `forculus ca generate --force`
 4. Check Codex trusts system certificates
 
 ### Credential Not Injected
@@ -684,18 +684,18 @@ If Codex reports TLS certificate errors:
 If API calls fail with 401 Unauthorized:
 
 1. Check tool mapping: Does URL match pattern?
-2. Verify credential binding: `cat ~/.bulwark/vault/bindings.yaml`
-3. Check session: `bulwark session list`
-4. Review audit logs: `bulwark audit query --event-type CredentialInjected`
+2. Verify credential binding: `cat ~/.forculus/vault/bindings.yaml`
+3. Check session: `forculus session list`
+4. Review audit logs: `forculus audit query --event-type CredentialInjected`
 
 ### Proxy Not Forwarding
 
 If requests hang or timeout:
 
-1. Check proxy is running: `ps aux | grep bulwark`
-2. Verify listen address: `bulwark config show`
+1. Check proxy is running: `ps aux | grep forculus`
+2. Verify listen address: `forculus config show`
 3. Test proxy directly: `curl -x http://localhost:8080 https://api.github.com`
-4. Check logs: `bulwark proxy logs`
+4. Check logs: `forculus proxy logs`
 
 ### Performance Issues
 
@@ -741,10 +741,10 @@ Run multiple Codex agents with different policies:
 
 ```bash
 # Production agent
-bulwark session create --operator codex-prod --metadata '{"env":"prod"}'
+forculus session create --operator codex-prod --metadata '{"env":"prod"}'
 
 # Development agent
-bulwark session create --operator codex-dev --metadata '{"env":"dev"}'
+forculus session create --operator codex-dev --metadata '{"env":"dev"}'
 
 # Different policies per operator
 policies:

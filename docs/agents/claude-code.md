@@ -1,10 +1,10 @@
 # Claude Code Integration
 
-Claude Code is Anthropic's official CLI for Claude, providing agentic capabilities for software development tasks. Bulwark integrates with Claude Code via the MCP (Model Context Protocol) to add governance, policy enforcement, and audit logging.
+Claude Code is Anthropic's official CLI for Claude, providing agentic capabilities for software development tasks. Forculus integrates with Claude Code via the MCP (Model Context Protocol) to add governance, policy enforcement, and audit logging.
 
 ## Overview
 
-Bulwark provides Claude Code with:
+Forculus provides Claude Code with:
 
 - **Policy enforcement**: Control which tools Claude Code can use
 - **Credential management**: Securely inject API keys and tokens
@@ -20,20 +20,20 @@ Claude Code CLI
     |
     | (MCP stdio/JSON-RPC)
     |
-Bulwark MCP Gateway
+Forculus MCP Gateway
     |
     | (Policy, Credentials, Audit, Content Inspection)
     |
 MCP Servers (filesystem, github, slack, etc.)
 ```
 
-Claude Code connects to Bulwark's MCP gateway, which enforces policies and forwards approved requests to the actual MCP servers.
+Claude Code connects to Forculus's MCP gateway, which enforces policies and forwards approved requests to the actual MCP servers.
 
 ## Configuration
 
-### 1. Configure Bulwark MCP Gateway
+### 1. Configure Forculus MCP Gateway
 
-Create or edit `~/.bulwark/bulwark.yaml`:
+Create or edit `~/.forculus/forculus.yaml`:
 
 ```yaml
 mcp:
@@ -70,17 +70,17 @@ mcp:
 # Enable policy enforcement
 policy:
   enabled: true
-  policy_file: ~/.bulwark/policies.yaml
+  policy_file: ~/.forculus/policies.yaml
 
 # Enable credential vault
 vault:
   enabled: true
-  vault_dir: ~/.bulwark/vault
+  vault_dir: ~/.forculus/vault
 
 # Enable audit logging
 audit:
   enabled: true
-  database_path: ~/.bulwark/audit/audit.db
+  database_path: ~/.forculus/audit/audit.db
 
 # Enable content inspection
 content_inspection:
@@ -96,24 +96,24 @@ Edit Claude Code's MCP settings file (`~/.claude/config.json` or similar):
 ```json
 {
   "mcpServers": {
-    "bulwark": {
-      "command": "bulwark",
+    "forculus": {
+      "command": "forculus",
       "args": ["mcp", "gateway"],
       "env": {
-        "BULWARK_SESSION_TOKEN": "bwk_sess_your_session_token_here"
+        "FORCULUS_SESSION_TOKEN": "bwk_sess_your_session_token_here"
       }
     }
   }
 }
 ```
 
-Note: Instead of connecting directly to MCP servers, Claude Code connects to Bulwark's gateway.
+Note: Instead of connecting directly to MCP servers, Claude Code connects to Forculus's gateway.
 
 ### 3. Create Session Token
 
 ```bash
 # Create a session for your operator ID
-bulwark session create --operator alice
+forculus session create --operator alice
 
 # Output:
 # Session created: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
@@ -126,19 +126,19 @@ Copy the token into your Claude Code MCP config (step 2 above).
 
 ```bash
 # Add GitHub token
-bulwark cred add github-token
+forculus cred add github-token
 # Type: bearer_token
 # Secret: ghp_your_github_token_here
 
 # Add Slack token
-bulwark cred add slack-token
+forculus cred add slack-token
 # Type: bearer_token
 # Secret: xoxb-your-slack-token-here
 ```
 
 ### 5. Configure Credential Bindings
 
-Edit `~/.bulwark/vault/bindings.yaml`:
+Edit `~/.forculus/vault/bindings.yaml`:
 
 ```yaml
 bindings:
@@ -162,7 +162,7 @@ bindings:
 
 ### 6. Configure Policies
 
-Edit `~/.bulwark/policies.yaml`:
+Edit `~/.forculus/policies.yaml`:
 
 ```yaml
 policies:
@@ -209,7 +209,7 @@ policies:
 
 ## Session Token Delivery
 
-The session token is passed via the `BULWARK_SESSION_TOKEN` environment variable when starting the MCP gateway. Bulwark stores this token internally and uses it for all requests.
+The session token is passed via the `FORCULUS_SESSION_TOKEN` environment variable when starting the MCP gateway. Forculus stores this token internally and uses it for all requests.
 
 ### Token Management
 
@@ -222,7 +222,7 @@ struct McpGateway {
 }
 ```
 
-When processing requests, Bulwark uses this token to:
+When processing requests, Forculus uses this token to:
 1. Validate the session
 2. Look up the operator ID
 3. Enforce operator-specific policies
@@ -231,7 +231,7 @@ When processing requests, Bulwark uses this token to:
 
 ## Governance and Permission Prompts
 
-Bulwark's governance decisions are surfaced in Claude Code's UI through governance metadata.
+Forculus's governance decisions are surfaced in Claude Code's UI through governance metadata.
 
 ### Policy Allow (No Approval Required)
 
@@ -314,15 +314,15 @@ I've removed the sensitive data from the message. Would you like me to send it w
 
 ## Example Session
 
-Complete example of using Claude Code with Bulwark governance:
+Complete example of using Claude Code with Forculus governance:
 
 ### Setup
 
 ```bash
-# 1. Start with Bulwark configured (see Configuration section above)
+# 1. Start with Forculus configured (see Configuration section above)
 
 # 2. Create session
-bulwark session create --operator alice
+forculus session create --operator alice
 # Token: bwk_sess_abc123...
 
 # 3. Add to Claude Code config
@@ -410,11 +410,11 @@ Would you like me to help you set up secure credential sharing?
 
 ## Audit Trail
 
-All interactions are logged to Bulwark's audit system:
+All interactions are logged to Forculus's audit system:
 
 ```bash
 # View recent Claude Code activity
-bulwark audit query --operator alice --since 1h
+forculus audit query --operator alice --since 1h
 
 # Output:
 # 2026-02-15 10:30:00 | SessionCreated | alice | Created session bwk_sess_abc123...
@@ -427,7 +427,7 @@ bulwark audit query --operator alice --since 1h
 # 2026-02-15 10:34:00 | ContentInspectionTriggered | alice | aws-key | Block
 
 # Export for analysis
-bulwark audit export --operator alice --since 24h --output claude-activity.jsonl
+forculus audit export --operator alice --since 24h --output claude-activity.jsonl
 ```
 
 ## Best Practices
@@ -438,10 +438,10 @@ Create different sessions for different contexts:
 
 ```bash
 # Development session
-bulwark session create --operator alice --metadata '{"env":"dev"}'
+forculus session create --operator alice --metadata '{"env":"dev"}'
 
 # Production session (with stricter policies)
-bulwark session create --operator alice --metadata '{"env":"prod"}'
+forculus session create --operator alice --metadata '{"env":"prod"}'
 ```
 
 ### 2. Principle of Least Privilege
@@ -474,7 +474,7 @@ Set up alerts for unusual activity:
 # claude-anomaly-detection.sh
 
 # Alert if more than 10 policy denials in 1 hour
-DENIALS=$(bulwark audit query \
+DENIALS=$(forculus audit query \
   --operator alice \
   --event-type PolicyDecision \
   --since 1h | \
@@ -491,7 +491,7 @@ Review Claude Code activity weekly:
 
 ```bash
 # Weekly review
-bulwark audit stats --operator alice --since 7d
+forculus audit stats --operator alice --since 7d
 
 # Look for:
 # - Denied operations (why?)
@@ -506,13 +506,13 @@ Rotate session tokens monthly:
 
 ```bash
 # Create new session
-NEW_TOKEN=$(bulwark session create --operator alice | grep "bwk_sess_" | awk '{print $3}')
+NEW_TOKEN=$(forculus session create --operator alice | grep "bwk_sess_" | awk '{print $3}')
 
 # Update Claude Code config
 # (Manual step or automation)
 
 # Revoke old session
-bulwark session revoke bwk_sess_old_token_here
+forculus session revoke bwk_sess_old_token_here
 ```
 
 ## Troubleshooting
@@ -521,7 +521,7 @@ bulwark session revoke bwk_sess_old_token_here
 
 If Claude Code can't connect:
 
-1. Check session token: `bulwark session list`
+1. Check session token: `forculus session list`
 2. Verify token in Claude Code config
 3. Check expiration: Sessions expire after 24 hours by default
 4. Create new session if needed
@@ -530,8 +530,8 @@ If Claude Code can't connect:
 
 If Claude Code can't see expected tools:
 
-1. Check MCP server configuration in `bulwark.yaml`
-2. Verify MCP server is starting: Check Bulwark logs
+1. Check MCP server configuration in `forculus.yaml`
+2. Verify MCP server is starting: Check Forculus logs
 3. Test MCP server directly: `npx @modelcontextprotocol/server-github`
 4. Check policy: Tool may be denied by policy
 
@@ -539,16 +539,16 @@ If Claude Code can't see expected tools:
 
 If tool calls fail due to missing credentials:
 
-1. Check credential exists: `bulwark cred list`
-2. Verify binding: `cat ~/.bulwark/vault/bindings.yaml`
+1. Check credential exists: `forculus cred list`
+2. Verify binding: `cat ~/.forculus/vault/bindings.yaml`
 3. Check tool name matches binding pattern
-4. Review audit logs: `bulwark audit query --event-type CredentialInjected`
+4. Review audit logs: `forculus audit query --event-type CredentialInjected`
 
 ### Performance Issues
 
 If Claude Code is slow:
 
-1. Check rate limits: `bulwark rate-limit status`
+1. Check rate limits: `forculus rate-limit status`
 2. Disable content inspection for responses: `scan_responses: false`
 3. Reduce max_body_size in content inspection
 4. Check MCP server performance: May be the bottleneck
@@ -592,21 +592,21 @@ This adds metadata to every tool response:
 
 ### Multi-Operator Support
 
-Share Bulwark instance across multiple operators:
+Share Forculus instance across multiple operators:
 
 ```bash
 # Each operator creates their own session
-bulwark session create --operator alice
-bulwark session create --operator bob
-bulwark session create --operator charlie
+forculus session create --operator alice
+forculus session create --operator bob
+forculus session create --operator charlie
 
 # Each operator configures their Claude Code with their token
-# Bulwark enforces operator-specific policies and credentials
+# Forculus enforces operator-specific policies and credentials
 ```
 
 ### Integration with CI/CD
 
-Use Claude Code with Bulwark in CI/CD:
+Use Claude Code with Forculus in CI/CD:
 
 ```yaml
 # .github/workflows/claude-code.yml
@@ -619,15 +619,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Bulwark
+      - name: Setup Forculus
         run: |
-          # Install Bulwark
-          curl -L https://github.com/bulwark/bulwark/releases/download/latest/bulwark -o /usr/local/bin/bulwark
-          chmod +x /usr/local/bin/bulwark
+          # Install Forculus
+          curl -L https://github.com/forculus/forculus/releases/download/latest/forculus -o /usr/local/bin/forculus
+          chmod +x /usr/local/bin/forculus
 
           # Create session for CI
-          export BULWARK_SESSION=$(bulwark session create --operator ci-bot --format json | jq -r '.token')
-          echo "BULWARK_SESSION_TOKEN=$BULWARK_SESSION" >> $GITHUB_ENV
+          export FORCULUS_SESSION=$(forculus session create --operator ci-bot --format json | jq -r '.token')
+          echo "FORCULUS_SESSION_TOKEN=$FORCULUS_SESSION" >> $GITHUB_ENV
 
       - name: Run Claude Code Analysis
         run: |

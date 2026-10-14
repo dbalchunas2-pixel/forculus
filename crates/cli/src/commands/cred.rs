@@ -1,11 +1,11 @@
-//! `bulwark cred` — credential management commands.
+//! `forculus cred` — credential management commands.
 
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
-use bulwark_config::load_config;
-use bulwark_vault::credential::{Credential, CredentialType};
-use bulwark_vault::store::Vault;
+use forculus_config::load_config;
+use forculus_vault::credential::{Credential, CredentialType};
+use forculus_vault::store::Vault;
 use secrecy::SecretString;
 
 /// Add a credential to the vault.

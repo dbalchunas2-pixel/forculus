@@ -1,11 +1,11 @@
-//! Bulwark builtin governance tools — exposed as `bulwark__*` in the MCP tools/list.
+//! Forculus builtin governance tools — exposed as `forculus__*` in the MCP tools/list.
 
 use std::sync::Arc;
 
-use bulwark_audit::store::AuditStore;
-use bulwark_inspect::scanner::ContentScanner;
-use bulwark_policy::engine::PolicyEngine;
-use bulwark_vault::store::Vault;
+use forculus_audit::store::AuditStore;
+use forculus_inspect::scanner::ContentScanner;
+use forculus_policy::engine::PolicyEngine;
+use forculus_vault::store::Vault;
 
 use crate::types::{Tool, ToolCallResult, ToolContent};
 
@@ -15,7 +15,7 @@ mod scan;
 mod session;
 
 /// The namespace prefix for builtin tools.
-pub const BUILTIN_PREFIX: &str = "bulwark";
+pub const BUILTIN_PREFIX: &str = "forculus";
 
 /// Subsystem references for builtin tool handlers.
 pub struct BuiltinContext {
@@ -25,7 +25,7 @@ pub struct BuiltinContext {
     pub vault: Option<Arc<parking_lot::Mutex<Vault>>>,
 }
 
-/// Return the list of builtin tool definitions (already namespaced with `bulwark__`).
+/// Return the list of builtin tool definitions (already namespaced with `forculus__`).
 pub fn builtin_tools() -> Vec<Tool> {
     vec![
         scan::tool_definition(),
@@ -38,7 +38,7 @@ pub fn builtin_tools() -> Vec<Tool> {
     ]
 }
 
-/// Dispatch a builtin tool call by tool name (without the `bulwark__` prefix).
+/// Dispatch a builtin tool call by tool name (without the `forculus__` prefix).
 pub fn dispatch(
     ctx: &BuiltinContext,
     tool_name: &str,
@@ -95,13 +95,13 @@ mod tests {
         let tools = builtin_tools();
         assert_eq!(tools.len(), 7);
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
-        assert!(names.contains(&"bulwark__scan_content"));
-        assert!(names.contains(&"bulwark__audit_search"));
-        assert!(names.contains(&"bulwark__audit_tail"));
-        assert!(names.contains(&"bulwark__audit_stats"));
-        assert!(names.contains(&"bulwark__audit_verify"));
-        assert!(names.contains(&"bulwark__policy_evaluate"));
-        assert!(names.contains(&"bulwark__session_list"));
+        assert!(names.contains(&"forculus__scan_content"));
+        assert!(names.contains(&"forculus__audit_search"));
+        assert!(names.contains(&"forculus__audit_tail"));
+        assert!(names.contains(&"forculus__audit_stats"));
+        assert!(names.contains(&"forculus__audit_verify"));
+        assert!(names.contains(&"forculus__policy_evaluate"));
+        assert!(names.contains(&"forculus__session_list"));
     }
 
     #[test]
@@ -240,9 +240,9 @@ mod tests {
         let store = AuditStore::open(&dir.path().join("audit.db")).unwrap();
 
         // Insert a test event.
-        let event = bulwark_audit::event::AuditEvent::builder(
-            bulwark_audit::event::EventType::RequestProcessed,
-            bulwark_audit::event::Channel::McpGateway,
+        let event = forculus_audit::event::AuditEvent::builder(
+            forculus_audit::event::EventType::RequestProcessed,
+            forculus_audit::event::Channel::McpGateway,
         )
         .build();
         store.insert(&event).unwrap();

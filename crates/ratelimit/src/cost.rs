@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use bulwark_policy::glob::GlobPattern;
+use forculus_policy::glob::GlobPattern;
 
 /// A compiled cost rule.
 #[derive(Debug)]
@@ -48,7 +48,7 @@ struct CostState {
 
 impl CostTracker {
     /// Create a cost tracker from config rules.
-    pub fn new(default_cost: f64, rules: Vec<bulwark_config::CostRule>) -> Result<Self, String> {
+    pub fn new(default_cost: f64, rules: Vec<forculus_config::CostRule>) -> Result<Self, String> {
         let compiled = rules
             .into_iter()
             .map(|r| {
@@ -130,7 +130,7 @@ impl fmt::Debug for CostTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bulwark_config::CostRule;
+    use forculus_config::CostRule;
 
     fn cost_rule(tools: &[&str], cost: f64, budget: Option<f64>) -> CostRule {
         CostRule {

@@ -45,7 +45,7 @@ pub async fn handle_request(
     forward::forward_request(req, client_addr, ctx).await
 }
 
-/// Handle requests aimed at Bulwark itself (health check, etc.).
+/// Handle requests aimed at Forculus itself (health check, etc.).
 fn handle_internal(req: Request<Incoming>, start_time: Instant) -> Response<BoxBody> {
     match req.uri().path() {
         "/healthz" => health_check(start_time),
@@ -58,7 +58,7 @@ fn health_check(start_time: Instant) -> Response<BoxBody> {
     let uptime = start_time.elapsed().as_secs();
     let body = serde_json::json!({
         "status": "ok",
-        "version": bulwark_common::VERSION,
+        "version": forculus_common::VERSION,
         "uptime_seconds": uptime,
     });
     Response::builder()

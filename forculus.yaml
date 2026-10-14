@@ -1,7 +1,7 @@
 proxy:
   listen_address: "127.0.0.1:8080"
   tls:
-    ca_dir: "~/.bulwark/ca"
+    ca_dir: "~/.forculus/ca"
   tool_mappings:
     - url_pattern: "api.openai.com/*"
       tool: openai
@@ -23,7 +23,7 @@ vault:
 
 audit:
   enabled: true
-  db_path: "~/.bulwark/audit.db"
+  db_path: "~/.forculus/audit.db"
   retention_days: 90
 
 inspect:

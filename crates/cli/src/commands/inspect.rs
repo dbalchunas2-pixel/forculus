@@ -1,10 +1,10 @@
-//! `bulwark inspect` — scan content for sensitive data and list rules.
+//! `forculus inspect` — scan content for sensitive data and list rules.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_config::load_config;
-use bulwark_inspect::scanner::ContentScanner;
+use forculus_config::load_config;
+use forculus_inspect::scanner::ContentScanner;
 
 /// Scan text or a file for sensitive content.
 pub fn scan(
@@ -61,12 +61,12 @@ pub fn scan(
             .unwrap_or_else(|| format!("{:?}", f.category));
         let action = format!("{:?}", f.action).to_lowercase();
         let location = match &f.location {
-            bulwark_inspect::FindingLocation::ByteRange { start, end } => {
+            forculus_inspect::FindingLocation::ByteRange { start, end } => {
                 format!("bytes {start}-{end}")
             }
-            bulwark_inspect::FindingLocation::JsonPath { path } => path.clone(),
-            bulwark_inspect::FindingLocation::Line { line } => format!("line {line}"),
-            bulwark_inspect::FindingLocation::Unknown => "unknown".to_string(),
+            forculus_inspect::FindingLocation::JsonPath { path } => path.clone(),
+            forculus_inspect::FindingLocation::Line { line } => format!("line {line}"),
+            forculus_inspect::FindingLocation::Unknown => "unknown".to_string(),
         };
         let snippet = f.snippet.as_deref().unwrap_or("");
         println!(

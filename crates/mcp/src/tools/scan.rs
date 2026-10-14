@@ -1,4 +1,4 @@
-//! `bulwark__scan_content` — scan text for sensitive content.
+//! `forculus__scan_content` — scan text for sensitive content.
 
 use crate::types::{Tool, ToolCallResult};
 
@@ -6,7 +6,7 @@ use super::{BuiltinContext, error_result, json_result};
 
 pub fn tool_definition() -> Tool {
     Tool {
-        name: "bulwark__scan_content".to_string(),
+        name: "forculus__scan_content".to_string(),
         description: Some("Scan text for secrets, PII, and prompt injection patterns".to_string()),
         input_schema: serde_json::json!({
             "type": "object",

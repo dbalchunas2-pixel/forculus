@@ -1,8 +1,8 @@
-//! Bulwark auth — OAuth 2.1 / OIDC authentication for Bulwark sessions.
+//! Forculus auth — OAuth 2.1 / OIDC authentication for Forculus sessions.
 //!
 //! This crate handles OIDC token exchange, JWKS validation, group mapping,
 //! and claim extraction. It produces [`MappedClaims`] that the caller uses
-//! to create Bulwark sessions — session creation itself is not this crate's
+//! to create Forculus sessions — session creation itself is not this crate's
 //! responsibility.
 #![forbid(unsafe_code)]
 

@@ -1,10 +1,10 @@
 [package]
-name = "bulwark-common"
+name = "forculus-common"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Bulwark shared types and error definitions"
+description = "Forculus shared types and error definitions"
 
 [dependencies]
 thiserror.workspace = true

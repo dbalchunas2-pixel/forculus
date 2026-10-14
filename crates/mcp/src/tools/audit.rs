@@ -1,7 +1,7 @@
-//! `bulwark__audit_*` — audit log query tools.
+//! `forculus__audit_*` — audit log query tools.
 
-use bulwark_audit::event::{EventOutcome, EventType};
-use bulwark_audit::query::AuditFilter;
+use forculus_audit::event::{EventOutcome, EventType};
+use forculus_audit::query::AuditFilter;
 
 use crate::types::{Tool, ToolCallResult};
 
@@ -9,7 +9,7 @@ use super::{BuiltinContext, error_result, json_result};
 
 pub fn search_tool_definition() -> Tool {
     Tool {
-        name: "bulwark__audit_search".to_string(),
+        name: "forculus__audit_search".to_string(),
         description: Some("Search audit events with filters".to_string()),
         input_schema: serde_json::json!({
             "type": "object",
@@ -45,7 +45,7 @@ pub fn search_tool_definition() -> Tool {
 
 pub fn tail_tool_definition() -> Tool {
     Tool {
-        name: "bulwark__audit_tail".to_string(),
+        name: "forculus__audit_tail".to_string(),
         description: Some("Show the most recent audit events".to_string()),
         input_schema: serde_json::json!({
             "type": "object",
@@ -61,7 +61,7 @@ pub fn tail_tool_definition() -> Tool {
 
 pub fn stats_tool_definition() -> Tool {
     Tool {
-        name: "bulwark__audit_stats".to_string(),
+        name: "forculus__audit_stats".to_string(),
         description: Some("Show aggregate audit statistics".to_string()),
         input_schema: serde_json::json!({
             "type": "object",
@@ -77,7 +77,7 @@ pub fn stats_tool_definition() -> Tool {
 
 pub fn verify_tool_definition() -> Tool {
     Tool {
-        name: "bulwark__audit_verify".to_string(),
+        name: "forculus__audit_verify".to_string(),
         description: Some("Verify integrity of the audit hash chain".to_string()),
         input_schema: serde_json::json!({
             "type": "object",

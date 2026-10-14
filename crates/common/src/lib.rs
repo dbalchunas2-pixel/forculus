@@ -1,14 +1,14 @@
-//! Bulwark common — shared error types and constants used across all crates.
+//! Forculus common — shared error types and constants used across all crates.
 #![forbid(unsafe_code)]
 
-/// The current version of the Bulwark crate, set at compile time.
+/// The current version of the Forculus crate, set at compile time.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use thiserror::Error;
 
-/// Top-level error type for the Bulwark project.
+/// Top-level error type for the Forculus project.
 #[derive(Error, Debug)]
-pub enum BulwarkError {
+pub enum ForculusError {
     /// A configuration-related error.
     #[error("configuration error: {0}")]
     Config(String),
@@ -74,5 +74,5 @@ pub enum BulwarkError {
     Other(String),
 }
 
-/// Convenience result type alias using [`BulwarkError`].
-pub type Result<T> = std::result::Result<T, BulwarkError>;
+/// Convenience result type alias using [`ForculusError`].
+pub type Result<T> = std::result::Result<T, ForculusError>;

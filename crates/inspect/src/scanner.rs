@@ -34,7 +34,7 @@ impl ContentScanner {
     }
 
     /// Create a scanner from configuration.
-    pub fn from_config(config: &InspectionConfig) -> bulwark_common::Result<Self> {
+    pub fn from_config(config: &InspectionConfig) -> forculus_common::Result<Self> {
         debug_assert!(
             config.max_content_size > 0,
             "max_content_size must be positive"

@@ -12,7 +12,7 @@ use hyper::{Request, Response, StatusCode};
 use crate::gateway::McpGateway;
 use crate::transport::session::SessionManager;
 use crate::types::{
-    BULWARK_SESSION_HEADER, JsonRpcMessage, MCP_SESSION_HEADER, PARSE_ERROR, SESSION_TERMINATED,
+    FORCULUS_SESSION_HEADER, JsonRpcMessage, MCP_SESSION_HEADER, PARSE_ERROR, SESSION_TERMINATED,
 };
 
 /// Configuration for the HTTP transport layer.
@@ -72,7 +72,7 @@ impl HttpTransport {
 
         let vault_token = req
             .headers()
-            .get(BULWARK_SESSION_HEADER)
+            .get(FORCULUS_SESSION_HEADER)
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string());
 

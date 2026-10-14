@@ -1,12 +1,12 @@
-//! `bulwark audit` — search, tail, stats, export, and cleanup audit events.
+//! `forculus audit` — search, tail, stats, export, and cleanup audit events.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_audit::query::{AuditFilter, SortOrder};
-use bulwark_audit::retention::run_retention;
-use bulwark_audit::store::AuditStore;
-use bulwark_config::load_config;
+use forculus_audit::query::{AuditFilter, SortOrder};
+use forculus_audit::retention::run_retention;
+use forculus_audit::store::AuditStore;
+use forculus_config::load_config;
 
 /// Search audit events with optional filters.
 pub fn search(
@@ -19,7 +19,7 @@ pub fn search(
     limit: Option<usize>,
 ) -> Result<()> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store = AuditStore::open(Path::new(&db_path)).context("opening audit database")?;
 
     let mut filter = AuditFilter {
@@ -65,7 +65,7 @@ pub fn search(
 /// Tail the most recent N audit events.
 pub fn tail(config_path: &Path, count: usize) -> Result<()> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store = AuditStore::open(Path::new(&db_path)).context("opening audit database")?;
 
     let events = store.recent(count).context("querying recent events")?;
@@ -78,7 +78,7 @@ pub fn tail(config_path: &Path, count: usize) -> Result<()> {
 /// Show aggregate statistics.
 pub fn stats(config_path: &Path, since: Option<&str>) -> Result<()> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store = AuditStore::open(Path::new(&db_path)).context("opening audit database")?;
 
     let since_dt = since.and_then(parse_relative_time);
@@ -123,7 +123,7 @@ pub fn stats(config_path: &Path, since: Option<&str>) -> Result<()> {
 /// Export audit events as JSON lines.
 pub fn export(config_path: &Path, since: Option<&str>) -> Result<()> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store = AuditStore::open(Path::new(&db_path)).context("opening audit database")?;
 
     let mut filter = AuditFilter {
@@ -148,7 +148,7 @@ pub fn export(config_path: &Path, since: Option<&str>) -> Result<()> {
 /// Run retention cleanup.
 pub fn cleanup(config_path: &Path, days_override: Option<u32>) -> Result<()> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store = AuditStore::open(Path::new(&db_path)).context("opening audit database")?;
 
     let days = days_override.unwrap_or(config.audit.retention_days);
@@ -165,7 +165,7 @@ pub fn cleanup(config_path: &Path, days_override: Option<u32>) -> Result<()> {
 /// Verify the integrity of the audit hash chain.
 pub fn verify(config_path: &Path) -> Result<()> {
     let config = load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store = AuditStore::open(Path::new(&db_path)).context("opening audit database")?;
 
     let result = store.verify_chain().context("verifying audit hash chain")?;

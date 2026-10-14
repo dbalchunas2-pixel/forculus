@@ -1,10 +1,10 @@
 # OpenClaw Integration
 
-OpenClaw is an open-source AI agent framework that uses the Model Context Protocol (MCP) for tool integration. Bulwark integrates with OpenClaw via the MCP gateway to add governance, policy enforcement, and audit logging.
+OpenClaw is an open-source AI agent framework that uses the Model Context Protocol (MCP) for tool integration. Forculus integrates with OpenClaw via the MCP gateway to add governance, policy enforcement, and audit logging.
 
 ## Overview
 
-Bulwark provides OpenClaw with:
+Forculus provides OpenClaw with:
 
 - **Policy enforcement**: Control which tools OpenClaw can use
 - **Credential management**: Securely inject API keys and tokens
@@ -20,20 +20,20 @@ OpenClaw Agent
     |
     | (MCP stdio/JSON-RPC)
     |
-Bulwark MCP Gateway
+Forculus MCP Gateway
     |
     | (Policy, Credentials, Audit, Content Inspection)
     |
 MCP Servers (filesystem, github, slack, database, etc.)
 ```
 
-OpenClaw connects to Bulwark's MCP gateway, which enforces policies and forwards approved requests to the configured MCP servers.
+OpenClaw connects to Forculus's MCP gateway, which enforces policies and forwards approved requests to the configured MCP servers.
 
 ## Configuration
 
-### 1. Configure Bulwark MCP Gateway
+### 1. Configure Forculus MCP Gateway
 
-Create or edit `~/.bulwark/bulwark.yaml`:
+Create or edit `~/.forculus/forculus.yaml`:
 
 ```yaml
 mcp:
@@ -78,17 +78,17 @@ mcp:
 # Enable policy enforcement
 policy:
   enabled: true
-  policy_file: ~/.bulwark/policies.yaml
+  policy_file: ~/.forculus/policies.yaml
 
 # Enable credential vault
 vault:
   enabled: true
-  vault_dir: ~/.bulwark/vault
+  vault_dir: ~/.forculus/vault
 
 # Enable audit logging
 audit:
   enabled: true
-  database_path: ~/.bulwark/audit/audit.db
+  database_path: ~/.forculus/audit/audit.db
 
 # Enable content inspection
 content_inspection:
@@ -129,15 +129,15 @@ Edit OpenClaw's configuration file (typically `~/.openclaw/config.yaml` or simil
 
 ```yaml
 mcp:
-  # Connect to Bulwark gateway instead of direct MCP servers
+  # Connect to Forculus gateway instead of direct MCP servers
   servers:
-    - name: bulwark
-      command: bulwark
+    - name: forculus
+      command: forculus
       args:
         - mcp
         - gateway
       env:
-        BULWARK_SESSION_TOKEN: "bwk_sess_your_session_token_here"
+        FORCULUS_SESSION_TOKEN: "bwk_sess_your_session_token_here"
 
 # OpenClaw agent configuration
 agent:
@@ -156,7 +156,7 @@ agent:
 
 ```bash
 # Create a session for OpenClaw
-bulwark session create --operator openclaw-agent
+forculus session create --operator openclaw-agent
 
 # Output:
 # Session created: bwk_sess_o1p2e3n4c5l6a7w8x9y0z1a2b3c4d5e6
@@ -169,24 +169,24 @@ Copy the token into your OpenClaw config (step 2 above).
 
 ```bash
 # Add GitHub token
-bulwark cred add github-token
+forculus cred add github-token
 # Type: bearer_token
 # Secret: ghp_your_github_token_here
 
 # Add Slack token
-bulwark cred add slack-token
+forculus cred add slack-token
 # Type: bearer_token
 # Secret: xoxb-your-slack-token-here
 
 # Add PostgreSQL connection string
-bulwark cred add postgres-url
+forculus cred add postgres-url
 # Type: custom
 # Secret: postgresql://user:password@localhost:5432/dbname
 ```
 
 ### 5. Configure Credential Bindings
 
-Edit `~/.bulwark/vault/bindings.yaml`:
+Edit `~/.forculus/vault/bindings.yaml`:
 
 ```yaml
 bindings:
@@ -221,7 +221,7 @@ bindings:
 
 ### 6. Configure Policies
 
-Edit `~/.bulwark/policies.yaml`:
+Edit `~/.forculus/policies.yaml`:
 
 ```yaml
 policies:
@@ -310,21 +310,21 @@ policies:
 
 ## Example Session
 
-Complete example of using OpenClaw with Bulwark governance:
+Complete example of using OpenClaw with Forculus governance:
 
 ### Setup
 
 ```bash
-# 1. Configure Bulwark (see Configuration section)
+# 1. Configure Forculus (see Configuration section)
 
 # 2. Create session
-bulwark session create --operator openclaw-agent
+forculus session create --operator openclaw-agent
 # Token: bwk_sess_abc123...
 
 # 3. Add token to OpenClaw config
 # (See step 2 in Configuration)
 
-# 4. Start Bulwark MCP gateway (runs automatically when OpenClaw starts)
+# 4. Start Forculus MCP gateway (runs automatically when OpenClaw starts)
 
 # 5. Start OpenClaw
 openclaw start
@@ -343,7 +343,7 @@ Tool: filesystem::list-directory
 Parameters:
   path: "/home/user/workspace"
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Extract session: openclaw-agent
 2. Check policy: allow (filesystem::list-directory)
 3. Forward to filesystem MCP server
@@ -374,7 +374,7 @@ Tool: filesystem::read-file
 Parameters:
   path: "/home/user/workspace/main.rs"
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Check policy: allow
 2. Forward request
 
@@ -402,20 +402,20 @@ Parameters:
   title: "Update README"
   body: "We need to update the README with installation instructions."
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Check policy: allow (require_approval: true)
 2. PAUSE - Request approval
 
-[Bulwark Response]
+[Forculus Response]
 Error:
   code: "approval_required"
   message: "This operation requires approval"
   approval_request_id: "appr_xyz"
 
 OpenClaw: This operation requires your approval. Please approve at:
-https://bulwark.local/approve?request_id=appr_xyz
+https://forculus.local/approve?request_id=appr_xyz
 
-[User approves via Bulwark UI or CLI]
+[User approves via Forculus UI or CLI]
 
 OpenClaw: Approval received. Creating issue...
 
@@ -424,7 +424,7 @@ Tool: github::create-issue
 Parameters: (same as above)
 Approval: appr_xyz
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Verify approval
 2. Inject credential: github-token
 3. Forward to GitHub MCP server
@@ -448,11 +448,11 @@ Tool: github::delete-repo
 Parameters:
   repo: "owner/repo"
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Check policy: deny (destructive operation)
 2. BLOCK
 
-[Bulwark Response]
+[Forculus Response]
 Error:
   code: "policy_denied"
   message: "This operation is denied by policy"
@@ -478,7 +478,7 @@ Tool: postgres::query
 Parameters:
   query: "SELECT * FROM users"
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Check policy: allow (SELECT operation)
 2. Inject credential: postgres-url
 3. Content inspection: Check for PII in response
@@ -490,7 +490,7 @@ Result:
     - id: 1, name: "Alice", email: "alice@example.com", ssn: "123-45-6789"
     - id: 2, name: "Bob", email: "bob@example.com", ssn: "987-65-4321"
 
-[Bulwark Content Inspection]
+[Forculus Content Inspection]
 - Detected: email addresses (Low severity, Log action)
 - Detected: SSNs (High severity, Redact action)
 - Redacting SSNs...
@@ -518,11 +518,11 @@ Tool: postgres::query
 Parameters:
   query: "UPDATE users SET email = 'alice-new@example.com' WHERE id = 1"
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Check policy: allow (UPDATE operation, require_approval: true)
 2. PAUSE - Request approval
 
-[Bulwark Response]
+[Forculus Response]
 Error:
   code: "approval_required"
   message: "Database write operations require approval"
@@ -548,11 +548,11 @@ Tool: postgres::query
 Parameters:
   query: "DROP TABLE users"
 
-[Bulwark Processing]
+[Forculus Processing]
 1. Check policy: deny (DROP operation)
 2. BLOCK
 
-[Bulwark Response]
+[Forculus Response]
 Error:
   code: "policy_denied"
   message: "Dangerous database operations are not allowed"
@@ -571,7 +571,7 @@ All OpenClaw operations are logged:
 
 ```bash
 # View recent OpenClaw activity
-bulwark audit query --operator openclaw-agent --since 1h
+forculus audit query --operator openclaw-agent --since 1h
 
 # Output:
 # 2026-02-15 10:30:00 | SessionCreated | openclaw-agent | Created session
@@ -587,7 +587,7 @@ bulwark audit query --operator openclaw-agent --since 1h
 # 2026-02-15 10:35:00 | PolicyDecision | openclaw-agent | postgres::query | deny
 
 # Export for analysis
-bulwark audit export --operator openclaw-agent --since 24h --output openclaw-audit.jsonl
+forculus audit export --operator openclaw-agent --since 24h --output openclaw-audit.jsonl
 ```
 
 ## Best Practices
@@ -660,7 +660,7 @@ Set up monitoring for unusual patterns:
 # openclaw-monitor.sh
 
 # Alert on high denial rate
-DENIALS=$(bulwark audit query \
+DENIALS=$(forculus audit query \
   --operator openclaw-agent \
   --event-type PolicyDecision \
   --since 1h | \
@@ -671,7 +671,7 @@ if [ "$DENIALS" -gt 50 ]; then
 fi
 
 # Alert on content inspection blocks
-BLOCKS=$(bulwark audit query \
+BLOCKS=$(forculus audit query \
   --operator openclaw-agent \
   --event-type ContentInspectionTriggered \
   --since 1h | wc -l)
@@ -687,10 +687,10 @@ Review and update policies monthly:
 
 ```bash
 # Monthly policy review
-bulwark audit stats --operator openclaw-agent --since 30d
+forculus audit stats --operator openclaw-agent --since 30d
 
 # Identify frequently denied tools
-bulwark audit export \
+forculus audit export \
   --operator openclaw-agent \
   --event-type PolicyDecision \
   --since 30d \
@@ -760,7 +760,7 @@ cost_tracking:
 Monitor spending:
 
 ```bash
-bulwark cost show --operator openclaw-agent
+forculus cost show --operator openclaw-agent
 
 # Output:
 # Operator: openclaw-agent
@@ -806,12 +806,12 @@ Create environment-specific sessions:
 
 ```bash
 # Production session
-bulwark session create \
+forculus session create \
   --operator openclaw-prod \
   --metadata '{"env":"production","region":"us-east-1"}'
 
 # Development session
-bulwark session create \
+forculus session create \
   --operator openclaw-dev \
   --metadata '{"env":"development","region":"local"}'
 ```
@@ -822,18 +822,18 @@ bulwark session create \
 
 If OpenClaw can't connect:
 
-1. Verify session token: `bulwark session list`
+1. Verify session token: `forculus session list`
 2. Check token in OpenClaw config
 3. Create new session if expired
-4. Check Bulwark MCP gateway is running
+4. Check Forculus MCP gateway is running
 
 ### Tool Not Available
 
 If OpenClaw reports tool not found:
 
-1. Check MCP server configuration in `bulwark.yaml`
+1. Check MCP server configuration in `forculus.yaml`
 2. Test MCP server directly: `npx @modelcontextprotocol/server-github`
-3. Check server logs: Bulwark logs MCP server stdout/stderr
+3. Check server logs: Forculus logs MCP server stdout/stderr
 4. Verify policy allows the tool
 
 ### Approval Flow Not Working
@@ -842,14 +842,14 @@ If approval requests aren't showing:
 
 1. Check policy has `require_approval: true`
 2. Verify approval UI is accessible
-3. Check Bulwark logs for approval request creation
-4. Test approval flow: `bulwark approval list`
+3. Check Forculus logs for approval request creation
+4. Test approval flow: `forculus approval list`
 
 ### Content Inspection Too Aggressive
 
 If too many false positives:
 
-1. Review recent findings: `bulwark audit query --event-type ContentInspectionTriggered`
+1. Review recent findings: `forculus audit query --event-type ContentInspectionTriggered`
 2. Disable problematic rules: `enabled: false`
 3. Lower severity: `severity: Info`
 4. Change action: `action: Log` instead of `Block`
@@ -879,7 +879,7 @@ action_agent:
 
 ### OpenClaw Memory/Context
 
-Bulwark can inspect and redact sensitive data in OpenClaw's memory:
+Forculus can inspect and redact sensitive data in OpenClaw's memory:
 
 ```yaml
 content_inspection:
@@ -897,7 +897,7 @@ Track workflow execution in audit logs:
 
 ```bash
 # View workflow execution
-bulwark audit query \
+forculus audit query \
   --operator openclaw-agent \
   --since 1h \
   --format json | \
@@ -906,7 +906,7 @@ bulwark audit query \
 
 ## Summary
 
-OpenClaw integration with Bulwark provides:
+OpenClaw integration with Forculus provides:
 
 1. **Transparent governance**: Policies enforced without changing OpenClaw code
 2. **Secure credential management**: No credentials in OpenClaw config

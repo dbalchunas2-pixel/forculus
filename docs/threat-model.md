@@ -1,15 +1,15 @@
 # Threat Model
 
-This document describes the threats Bulwark is designed to defend against, the mitigations it provides today, and the limitations operators should be aware of when deploying it.
+This document describes the threats Forculus is designed to defend against, the mitigations it provides today, and the limitations operators should be aware of when deploying it.
 
 ## Trust Boundaries
 
-Bulwark defines three trust zones separated by two enforcement boundaries.
+Forculus defines three trust zones separated by two enforcement boundaries.
 
 ```
  Untrusted            Enforcement Boundary 1           Trusted (config only)          Enforcement Boundary 2            Untrusted
 ┌──────────┐         ┌──────────────────────────────────────────────────────┐         ┌──────────────────┐
-│  Agent   │ ──────> │                   Bulwark Gateway                    │ ──────> │  Upstream Tool   │
+│  Agent   │ ──────> │                   Forculus Gateway                    │ ──────> │  Upstream Tool   │
 │          │ <────── │  (proxy, policy, vault, inspect, audit, ratelimit)   │ <────── │                  │
 └──────────┘         └──────────────────────────────────────────────────────┘         └──────────────────┘
 ```
@@ -18,7 +18,7 @@ Bulwark defines three trust zones separated by two enforcement boundaries.
 |-----------|-------------|-----------|
 | Operator (human) | **Trusted** | Creates sessions, writes policies, manages credentials. All actions are audited. |
 | Configuration files | **Trusted** | Policies, bindings, and inspector rules are authored by the operator and read from the local filesystem. |
-| Bulwark process | **Trusted** | Assumed to run on infrastructure the operator controls. Compromise of the process is out of scope for runtime mitigations. |
+| Forculus process | **Trusted** | Assumed to run on infrastructure the operator controls. Compromise of the process is out of scope for runtime mitigations. |
 | Agent (AI system) | **Untrusted** | May be compromised, buggy, or intentionally malicious. Must authenticate with a session token. Every request is evaluated. |
 | Upstream tool / API | **Untrusted** | May return malicious payloads, leak data, or be compromised. Responses are inspected before being returned to the agent. |
 
@@ -26,17 +26,17 @@ Bulwark defines three trust zones separated by two enforcement boundaries.
 
 | Boundary | Inbound Data | Outbound Data |
 |----------|-------------|---------------|
-| Agent to Bulwark | HTTP request or JSON-RPC message, session token, tool name header | HTTP response or JSON-RPC result (potentially redacted) |
-| Bulwark to Upstream | Forwarded request with injected credentials | Upstream response (raw) |
+| Agent to Forculus | HTTP request or JSON-RPC message, session token, tool name header | HTTP response or JSON-RPC result (potentially redacted) |
+| Forculus to Upstream | Forwarded request with injected credentials | Upstream response (raw) |
 
 ## Threat Actors
 
 | Actor | Motivation | Capabilities |
 |-------|-----------|--------------|
-| **Malicious agent** | Exfiltrate credentials, access unauthorized tools, bypass policies | Crafts arbitrary HTTP requests or JSON-RPC messages; controls all content sent to Bulwark |
+| **Malicious agent** | Exfiltrate credentials, access unauthorized tools, bypass policies | Crafts arbitrary HTTP requests or JSON-RPC messages; controls all content sent to Forculus |
 | **Compromised upstream tool** | Steal injected credentials from requests, inject malicious content into responses | Controls response bodies, headers, and timing |
 | **Insider (rogue operator)** | Abuse privileged access to extract credentials or tamper with audit trail | Has filesystem access, can read config files and databases |
-| **Network attacker** | Intercept credentials in transit, session hijack | Can observe or modify traffic between agent and Bulwark if TLS is not used or CA is compromised |
+| **Network attacker** | Intercept credentials in transit, session hijack | Can observe or modify traffic between agent and Forculus if TLS is not used or CA is compromised |
 | **Supply-chain attacker** | Inject malicious code via dependencies | Compromises a crate in the dependency tree at build time |
 
 ## Attack Surfaces
@@ -48,12 +48,12 @@ Bulwark defines three trust zones separated by two enforcement boundaries.
 **How tokens work today**:
 - Format: `bwk_sess_` + 32 random hex characters (128 bits of entropy)
 - Stored as keyed blake3 hashes in SQLite (never stored in plaintext after creation)
-- Passed via `X-Bulwark-Session` header (HTTP) or `initialize` params (MCP)
+- Passed via `X-Forculus-Session` header (HTTP) or `initialize` params (MCP)
 
 | Attack Vector | Mitigation | Residual Risk |
 |--------------|------------|---------------|
-| Token leaked in agent logs or environment variables | Operator responsibility to handle tokens securely | Bulwark cannot control how agents store tokens |
-| Token intercepted on the network (agent to Bulwark) | HTTP proxy mode uses plaintext by default for the agent-to-proxy hop; HTTPS CONNECT uses TLS MITM | Agent-to-proxy hop is **not encrypted** unless the agent connects via HTTPS CONNECT |
+| Token leaked in agent logs or environment variables | Operator responsibility to handle tokens securely | Forculus cannot control how agents store tokens |
+| Token intercepted on the network (agent to Forculus) | HTTP proxy mode uses plaintext by default for the agent-to-proxy hop; HTTPS CONNECT uses TLS MITM | Agent-to-proxy hop is **not encrypted** unless the agent connects via HTTPS CONNECT |
 | Token brute-force | 128-bit entropy makes brute-force infeasible; keyed blake3 hashing in the session store | None |
 | Stolen token reused after session expiry | Sessions have configurable TTL; expired sessions are rejected on validation | Tokens are valid until TTL expires; no per-request nonce or binding to client identity |
 
@@ -76,8 +76,8 @@ Bulwark defines three trust zones separated by two enforcement boundaries.
 | Attack Vector | Mitigation | Residual Risk |
 |--------------|------------|---------------|
 | Reading `.age` files from disk | Credentials are encrypted with age; attacker needs the age private key to decrypt | If the age identity key is on the same filesystem, disk compromise exposes both |
-| Memory scraping of the Bulwark process | Credentials use `SecretString` (from the `secrecy` crate) which attempts to zeroize on drop | Rust does not guarantee zeroization; the compiler or OS may copy secret bytes to other memory locations (stack spills, page swaps) |
-| Credential in transit (Bulwark to upstream) | Bulwark re-establishes TLS to upstream endpoints and validates server certificates | Credentials are present in plaintext in the Bulwark process memory between decryption and injection |
+| Memory scraping of the Forculus process | Credentials use `SecretString` (from the `secrecy` crate) which attempts to zeroize on drop | Rust does not guarantee zeroization; the compiler or OS may copy secret bytes to other memory locations (stack spills, page swaps) |
+| Credential in transit (Forculus to upstream) | Forculus re-establishes TLS to upstream endpoints and validates server certificates | Credentials are present in plaintext in the Forculus process memory between decryption and injection |
 | Agent inspecting injected credentials in upstream responses | Content inspector scans responses for secret patterns (API keys, tokens) and can redact before returning to agent | Response scanning is regex-based and may miss obfuscated or novel credential formats |
 | Side-channel timing attacks on credential decryption | age decryption happens on every injection (or cached after first use depending on config) | No constant-time guarantees on the credential lookup path; cache hit/miss may be observable |
 | Credential binding bypass (agent requests wrong tool to get a credential injected into a request it controls) | Bindings use glob matching against the tool name; scope constraints restrict which operators can use which credentials | If tool name extraction is manipulable (e.g., agent sets `X-Tool-Name` to a tool that has credentials bound), credentials could be injected into attacker-controlled requests |
@@ -101,19 +101,19 @@ Bulwark defines three trust zones separated by two enforcement boundaries.
 
 | Attack Vector | Mitigation | Residual Risk |
 |--------------|------------|---------------|
-| Direct modification of `audit.db` | blake3 hash chain links each event to its predecessor; any modification breaks the chain and is detectable via `bulwark audit verify` | Tamper-**evident**, not tamper-**proof**: an attacker with filesystem access can recompute the entire chain after modification |
+| Direct modification of `audit.db` | blake3 hash chain links each event to its predecessor; any modification breaks the chain and is detectable via `forculus audit verify` | Tamper-**evident**, not tamper-**proof**: an attacker with filesystem access can recompute the entire chain after modification |
 | Deleting the audit database | Operator should restrict filesystem permissions on `audit.db` | No built-in replication or remote backup; if the file is deleted before export, events are lost |
-| Inserting false events | Events are appended by the Bulwark process; insertion requires process-level access | If the Bulwark process is compromised, false events can be injected with valid hashes |
+| Inserting false events | Events are appended by the Forculus process; insertion requires process-level access | If the Forculus process is compromised, false events can be injected with valid hashes |
 | Truncating old events via retention policy | Retention is operator-configured; critical events can have longer retention | Retention cleanup removes events permanently; no soft-delete or archival mechanism |
 
 ### 6. TLS MITM CA Key Compromise
 
-**Threat**: The Bulwark CA private key (`ca-key.pem`) is stolen, allowing an attacker to impersonate any HTTPS endpoint to the agent.
+**Threat**: The Forculus CA private key (`ca-key.pem`) is stolen, allowing an attacker to impersonate any HTTPS endpoint to the agent.
 
 | Attack Vector | Mitigation | Residual Risk |
 |--------------|------------|---------------|
-| Reading `ca-key.pem` from disk | Generated with ECDSA P-256; file should be permission-restricted by the operator | **Bulwark does not enforce file permissions on the CA key**; it is the operator's responsibility |
-| Using a compromised CA to MITM traffic outside Bulwark | The CA is only trusted by agents explicitly configured to use it | If agents trust the CA system-wide, any process on the network could use the stolen key to MITM their traffic |
+| Reading `ca-key.pem` from disk | Generated with ECDSA P-256; file should be permission-restricted by the operator | **Forculus does not enforce file permissions on the CA key**; it is the operator's responsibility |
+| Using a compromised CA to MITM traffic outside Forculus | The CA is only trusted by agents explicitly configured to use it | If agents trust the CA system-wide, any process on the network could use the stolen key to MITM their traffic |
 | Ephemeral leaf certificate forgery | Leaf certs are cached in an in-memory LRU cache (capacity 1000); no persistence | Cache is process-scoped; compromise requires process memory access |
 
 ### 7. Rate Limit Bypass
@@ -129,21 +129,21 @@ Bulwark defines three trust zones separated by two enforcement boundaries.
 
 ### 8. MCP Protocol-Level Attacks
 
-**Threat**: Attacks exploiting the JSON-RPC / MCP protocol layer between agent and Bulwark or Bulwark and the upstream MCP server.
+**Threat**: Attacks exploiting the JSON-RPC / MCP protocol layer between agent and Forculus or Forculus and the upstream MCP server.
 
 | Attack Vector | Mitigation | Residual Risk |
 |--------------|------------|---------------|
-| Malformed JSON-RPC payloads | Bulwark parses JSON-RPC strictly; malformed messages are rejected | Parser bugs in `serde_json` could theoretically be exploited, though this is unlikely given the crate's maturity |
+| Malformed JSON-RPC payloads | Forculus parses JSON-RPC strictly; malformed messages are rejected | Parser bugs in `serde_json` could theoretically be exploited, though this is unlikely given the crate's maturity |
 | Method name spoofing (calling `tools/call` with a tool name that maps to a different tool) | Policy evaluation uses the tool name from the parsed `tools/call` params, not a separate header | No secondary verification that the MCP server actually implements the claimed tool |
 | Notification flooding (JSON-RPC notifications do not require responses) | Notifications are logged but not forwarded to upstream by default | Large volumes of notifications could consume audit log storage |
-| Injecting extra fields in JSON-RPC params to manipulate upstream server behavior | Bulwark forwards params as-is after policy check and credential injection | Bulwark does not validate or sanitize individual tool parameters beyond content inspection |
-| Response manipulation by compromised MCP server | Content inspector scans MCP responses | MCP stdio transport has no authentication or integrity checking between Bulwark and the upstream server |
+| Injecting extra fields in JSON-RPC params to manipulate upstream server behavior | Forculus forwards params as-is after policy check and credential injection | Forculus does not validate or sanitize individual tool parameters beyond content inspection |
+| Response manipulation by compromised MCP server | Content inspector scans MCP responses | MCP stdio transport has no authentication or integrity checking between Forculus and the upstream server |
 
 ## Known Limitations
 
-The following are honest assessments of what Bulwark does **not** protect against today.
+The following are honest assessments of what Forculus does **not** protect against today.
 
-1. **No encryption of agent-to-proxy traffic in HTTP mode**. The `X-Bulwark-Session` header is sent in plaintext when the agent uses `http://` to reach the proxy. Only HTTPS CONNECT requests benefit from TLS.
+1. **No encryption of agent-to-proxy traffic in HTTP mode**. The `X-Forculus-Session` header is sent in plaintext when the agent uses `http://` to reach the proxy. Only HTTPS CONNECT requests benefit from TLS.
 
 2. **No client authentication beyond session tokens**. There is no mutual TLS, IP allowlisting, or cryptographic client binding. Any process that knows the session token can make requests.
 
@@ -157,13 +157,13 @@ The following are honest assessments of what Bulwark does **not** protect agains
 
 7. **Session tokens have no client binding**. A stolen token can be used from any network location until it expires. There is no IP pinning, user-agent binding, or device fingerprinting.
 
-8. **`ca-key.pem` permissions are not enforced**. Bulwark does not check or set filesystem permissions on the CA private key. Operators must do this manually.
+8. **`ca-key.pem` permissions are not enforced**. Forculus does not check or set filesystem permissions on the CA private key. Operators must do this manually.
 
 9. **No request/response body storage**. The audit log stores blake3 hashes of request and response bodies, not the bodies themselves. Forensic reconstruction of what was actually sent or received is not possible from the audit log alone.
 
 10. **`transform` verdict is not fully implemented**. The policy engine accepts `transform` as a verdict but currently treats it as `allow`. Request transformation logic is not yet in place.
 
-11. **Rate-limit buckets are in-memory only**. If the Bulwark process restarts, all rate-limit state is lost and buckets reset to full capacity.
+11. **Rate-limit buckets are in-memory only**. If the Forculus process restarts, all rate-limit state is lost and buckets reset to full capacity.
 
 12. **No credential rotation automation**. Credential rotation is a manual CLI operation. There is no automatic rotation, grace period, or dual-credential overlap.
 
@@ -171,8 +171,8 @@ The following are honest assessments of what Bulwark does **not** protect agains
 
 ### Network and Transport
 
-- **Run Bulwark on localhost or a private network**. The agent-to-proxy hop is not encrypted in HTTP mode. Do not expose the proxy port to untrusted networks.
-- **Restrict `ca-key.pem` permissions** to `0600` owned by the Bulwark process user. Audit access to this file.
+- **Run Forculus on localhost or a private network**. The agent-to-proxy hop is not encrypted in HTTP mode. Do not expose the proxy port to untrusted networks.
+- **Restrict `ca-key.pem` permissions** to `0600` owned by the Forculus process user. Audit access to this file.
 - **Use HTTPS CONNECT** for all agent traffic where possible, so the session token is transmitted inside the TLS tunnel.
 - **Rotate the CA key periodically** and re-distribute the new `ca.pem` to agents.
 
@@ -184,7 +184,7 @@ The following are honest assessments of what Bulwark does **not** protect agains
 
 ### Policy Configuration
 
-- **Test policies in a staging environment** before deploying to production. Use `bulwark audit query` to verify that the expected verdicts are being produced.
+- **Test policies in a staging environment** before deploying to production. Use `forculus audit query` to verify that the expected verdicts are being produced.
 - **Prefer explicit allow-lists** over broad globs. A rule matching `tools: ["*"]` should be rare and well-justified.
 - **Review override-scope policies regularly**. These bypass all other rules and should be time-limited.
 - **Version-control all policy files** and require code review for changes.
@@ -198,10 +198,10 @@ The following are honest assessments of what Bulwark does **not** protect agains
 
 ### Audit and Monitoring
 
-- **Run `bulwark audit verify`** on a schedule (daily or on each startup) to detect hash chain breaks.
+- **Run `forculus audit verify`** on a schedule (daily or on each startup) to detect hash chain breaks.
 - **Export audit logs** to a remote, append-only store (S3 with Object Lock, a SIEM, or similar). The local SQLite database should not be the only copy.
 - **Alert on anomalous events**: `ContentInspectionTriggered` with Critical severity, `RateLimitExceeded` spikes, and unexpected `PolicyDecision` denials.
-- **Restrict filesystem access** to `audit.db` and `sessions.db` to the Bulwark process user only.
+- **Restrict filesystem access** to `audit.db` and `sessions.db` to the Forculus process user only.
 
 ### Content Inspection
 
@@ -212,11 +212,11 @@ The following are honest assessments of what Bulwark does **not** protect agains
 
 ### Deployment Hardening
 
-- **Run Bulwark as a dedicated, unprivileged user** with minimal filesystem access.
-- **Use process isolation** (containers, VMs, or sandboxing) to limit the impact of a Bulwark process compromise.
+- **Run Forculus as a dedicated, unprivileged user** with minimal filesystem access.
+- **Use process isolation** (containers, VMs, or sandboxing) to limit the impact of a Forculus process compromise.
 - **Pin dependency versions** and audit the supply chain with `cargo audit` and `cargo deny`.
 - **Enable Rust's hardening flags** in production builds (`-C overflow-checks=yes`, panic=abort).
-- **Monitor Bulwark process memory usage** to detect potential denial-of-service via large payloads or cache exhaustion.
+- **Monitor Forculus process memory usage** to detect potential denial-of-service via large payloads or cache exhaustion.
 
 ## Summary Table
 

@@ -37,7 +37,7 @@ pub struct InspectionConfig {
 ///
 /// This is a plain-data representation that lives in the sync inspect crate.
 /// The full runtime type with circuit breakers and caches lives in
-/// `bulwark-inspect-http`.
+/// `forculus-inspect-http`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpAnalyzerConfigRef {
     /// Human-readable name.

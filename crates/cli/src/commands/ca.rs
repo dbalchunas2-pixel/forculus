@@ -1,9 +1,9 @@
-//! `bulwark ca` — CA certificate management commands.
+//! `forculus ca` — CA certificate management commands.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_config::{expand_tilde, load_config};
+use forculus_config::{expand_tilde, load_config};
 
 use crate::ca_trust;
 
@@ -20,7 +20,7 @@ pub fn export(config_path: &Path) -> Result<()> {
 
     if !ca_pem_path.exists() {
         anyhow::bail!(
-            "No CA certificate found at {}. Run `bulwark init` or `bulwark proxy start` first.",
+            "No CA certificate found at {}. Run `forculus init` or `forculus proxy start` first.",
             ca_pem_path.display()
         );
     }
@@ -37,7 +37,7 @@ pub fn path(config_path: &Path) -> Result<()> {
     let ca_pem_path = resolve_ca_pem_path(config_path)?;
 
     if !ca_pem_path.exists() {
-        eprintln!("CA certificate not found. Run 'bulwark init' first.");
+        eprintln!("CA certificate not found. Run 'forculus init' first.");
         std::process::exit(1);
     }
 
@@ -49,12 +49,12 @@ pub fn path(config_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Install the Bulwark CA certificate as a trusted root in the system store.
+/// Install the Forculus CA certificate as a trusted root in the system store.
 pub fn install(config_path: &Path, skip_confirm: bool) -> Result<()> {
     let ca_pem_path = resolve_ca_pem_path(config_path)?;
 
     if !ca_pem_path.exists() {
-        anyhow::bail!("CA certificate not found. Run `bulwark init` first.");
+        anyhow::bail!("CA certificate not found. Run `forculus init` first.");
     }
 
     let platform = ca_trust::detect_platform();
@@ -63,8 +63,8 @@ pub fn install(config_path: &Path, skip_confirm: bool) -> Result<()> {
     // Confirmation prompt (unless --yes was passed).
     if !skip_confirm {
         eprintln!();
-        eprintln!("This will install the Bulwark CA certificate as a trusted root.");
-        eprintln!("Bulwark will be able to intercept HTTPS traffic on this machine.");
+        eprintln!("This will install the Forculus CA certificate as a trusted root.");
+        eprintln!("Forculus will be able to intercept HTTPS traffic on this machine.");
         eprint!("Continue? [y/N] ");
 
         let mut input = String::new();
@@ -88,7 +88,7 @@ pub fn install(config_path: &Path, skip_confirm: bool) -> Result<()> {
             eprintln!();
             eprintln!("CA certificate installed successfully.");
             eprintln!(
-                "The Bulwark CA is now trusted system-wide. HTTPS MITM inspection is active."
+                "The Forculus CA is now trusted system-wide. HTTPS MITM inspection is active."
             );
             Ok(())
         }
@@ -96,18 +96,18 @@ pub fn install(config_path: &Path, skip_confirm: bool) -> Result<()> {
             anyhow::bail!(
                 "Failed to install CA certificate.\n\n{e}\n\n\
                  Hint: try running with elevated privileges:\n  \
-                 sudo bulwark ca install --yes"
+                 sudo forculus ca install --yes"
             );
         }
     }
 }
 
-/// Remove the Bulwark CA certificate from the system trust store.
+/// Remove the Forculus CA certificate from the system trust store.
 pub fn uninstall(config_path: &Path, skip_confirm: bool) -> Result<()> {
     let ca_pem_path = resolve_ca_pem_path(config_path)?;
 
     if !ca_pem_path.exists() {
-        anyhow::bail!("CA certificate not found. Run `bulwark init` first.");
+        anyhow::bail!("CA certificate not found. Run `forculus init` first.");
     }
 
     let platform = ca_trust::detect_platform();
@@ -115,7 +115,7 @@ pub fn uninstall(config_path: &Path, skip_confirm: bool) -> Result<()> {
 
     if !skip_confirm {
         eprintln!();
-        eprintln!("This will remove the Bulwark CA certificate from the system trust store.");
+        eprintln!("This will remove the Forculus CA certificate from the system trust store.");
         eprintln!("HTTPS MITM inspection will no longer work until the CA is reinstalled.");
         eprint!("Continue? [y/N] ");
 
@@ -145,13 +145,13 @@ pub fn uninstall(config_path: &Path, skip_confirm: bool) -> Result<()> {
             anyhow::bail!(
                 "Failed to remove CA certificate.\n\n{e}\n\n\
                  Hint: try running with elevated privileges:\n  \
-                 sudo bulwark ca uninstall --yes"
+                 sudo forculus ca uninstall --yes"
             );
         }
     }
 }
 
-/// Run the CA install flow non-interactively (used by `bulwark init`).
+/// Run the CA install flow non-interactively (used by `forculus init`).
 /// Returns Ok(true) if installed, Ok(false) if skipped.
 pub fn try_install_from_init(ca_pem_path: &Path) -> Result<bool> {
     let platform = ca_trust::detect_platform();
@@ -173,7 +173,7 @@ pub fn try_install_from_init(ca_pem_path: &Path) -> Result<bool> {
         }
         Err(e) => {
             eprintln!("  Could not install CA automatically: {e}");
-            eprintln!("  You can install it manually later with: sudo bulwark ca install");
+            eprintln!("  You can install it manually later with: sudo forculus ca install");
             Ok(false)
         }
     }
@@ -198,7 +198,7 @@ mod tests {
         .unwrap();
 
         // Write a config pointing to this CA dir.
-        let config_path = dir.path().join("bulwark.yaml");
+        let config_path = dir.path().join("forculus.yaml");
         std::fs::write(
             &config_path,
             format!(

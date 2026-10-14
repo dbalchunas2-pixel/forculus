@@ -1,6 +1,6 @@
 # Audit System
 
-Bulwark maintains a comprehensive audit log of all governance decisions, credential usage, and agent operations. The audit system uses SQLite for storage and includes hash chain verification to prevent tampering.
+Forculus maintains a comprehensive audit log of all governance decisions, credential usage, and agent operations. The audit system uses SQLite for storage and includes hash chain verification to prevent tampering.
 
 ## Overview
 
@@ -15,11 +15,11 @@ The audit system provides:
 
 ## Event Types
 
-Bulwark tracks the following event types:
+Forculus tracks the following event types:
 
 ### RequestProcessed
 
-Logged for every HTTP request or MCP tool call processed by Bulwark.
+Logged for every HTTP request or MCP tool call processed by Forculus.
 
 ```json
 {
@@ -180,30 +180,30 @@ Logged when a cost budget is exceeded.
 
 ## Querying Audit Logs
 
-Use the `bulwark audit query` command to search audit logs:
+Use the `forculus audit query` command to search audit logs:
 
 ```bash
 # Query all events in the last hour
-bulwark audit query --since 1h
+forculus audit query --since 1h
 
 # Query specific event types
-bulwark audit query --event-type PolicyDecision --since 24h
+forculus audit query --event-type PolicyDecision --since 24h
 
 # Query by operator
-bulwark audit query --operator alice --since 7d
+forculus audit query --operator alice --since 7d
 
 # Query by tool
-bulwark audit query --tool "github::*" --since 24h
+forculus audit query --tool "github::*" --since 24h
 
 # Combine filters
-bulwark audit query \
+forculus audit query \
   --event-type CredentialInjected \
   --operator alice \
   --credential github-token \
   --since 1d
 
 # Query with time range
-bulwark audit query \
+forculus audit query \
   --after "2026-02-14T00:00:00Z" \
   --before "2026-02-15T00:00:00Z"
 ```
@@ -226,16 +226,16 @@ Export audit logs to JSON Lines format for analysis:
 
 ```bash
 # Export all events
-bulwark audit export --output audit.jsonl
+forculus audit export --output audit.jsonl
 
 # Export with filters
-bulwark audit export \
+forculus audit export \
   --event-type RequestProcessed \
   --since 7d \
   --output requests.jsonl
 
 # Export for specific operator
-bulwark audit export \
+forculus audit export \
   --operator alice \
   --since 30d \
   --output alice-audit.jsonl
@@ -269,13 +269,13 @@ cat audit.jsonl | jq -r '[.timestamp, .event_type, .operator_id, .details.tool_n
 
 ## Hash Chain Verification
 
-Bulwark uses blake3 hash chains to ensure audit log integrity. Each event includes the hash of the previous event, creating an immutable chain.
+Forculus uses blake3 hash chains to ensure audit log integrity. Each event includes the hash of the previous event, creating an immutable chain.
 
 ### Verify Hash Chain
 
 ```bash
 # Verify the entire hash chain
-bulwark audit verify
+forculus audit verify
 
 # Output:
 # Verifying hash chain for 1,234 events...
@@ -313,12 +313,12 @@ This ensures that any modification to any event will break the chain.
 
 ## Retention Policies
 
-Configure audit log retention in `bulwark.yaml`:
+Configure audit log retention in `forculus.yaml`:
 
 ```yaml
 audit:
   enabled: true
-  database_path: ~/.bulwark/audit/audit.db
+  database_path: ~/.forculus/audit/audit.db
   retention:
     default_days: 90        # Keep events for 90 days by default
     critical_days: 365      # Keep critical events for 1 year
@@ -348,13 +348,13 @@ audit:
 
 ```bash
 # Delete events older than 90 days
-bulwark audit cleanup --older-than 90d
+forculus audit cleanup --older-than 90d
 
 # Delete specific event types
-bulwark audit cleanup --event-type SessionExpired --older-than 30d
+forculus audit cleanup --event-type SessionExpired --older-than 30d
 
 # Dry run to see what would be deleted
-bulwark audit cleanup --older-than 90d --dry-run
+forculus audit cleanup --older-than 90d --dry-run
 ```
 
 ## Audit Commands
@@ -363,22 +363,22 @@ Complete reference of audit commands:
 
 ```bash
 # Query audit logs
-bulwark audit query [OPTIONS]
+forculus audit query [OPTIONS]
 
 # Export audit logs
-bulwark audit export --output <file> [OPTIONS]
+forculus audit export --output <file> [OPTIONS]
 
 # Verify hash chain integrity
-bulwark audit verify
+forculus audit verify
 
 # Show audit statistics
-bulwark audit stats [--since <duration>]
+forculus audit stats [--since <duration>]
 
 # Clean up old events
-bulwark audit cleanup --older-than <duration> [OPTIONS]
+forculus audit cleanup --older-than <duration> [OPTIONS]
 
 # Show audit configuration
-bulwark audit config
+forculus audit config
 ```
 
 ## Audit Statistics
@@ -387,7 +387,7 @@ View audit statistics to understand system usage:
 
 ```bash
 # Show overall statistics
-bulwark audit stats
+forculus audit stats
 
 # Output:
 # Audit Statistics (All Time)
@@ -414,15 +414,15 @@ bulwark audit stats
 #   aws::s3::list-objects:     4,890 events
 
 # Show statistics for last 24 hours
-bulwark audit stats --since 24h
+forculus audit stats --since 24h
 ```
 
 ## Security Best Practices
 
-1. **Regular verification**: Run `bulwark audit verify` regularly (daily or weekly)
+1. **Regular verification**: Run `forculus audit verify` regularly (daily or weekly)
 2. **Export backups**: Export audit logs to external systems for long-term storage
 3. **Monitor critical events**: Set up alerts for ContentInspectionTriggered, RateLimitExceeded, etc.
-4. **Restrict access**: Audit database should only be readable by Bulwark process
+4. **Restrict access**: Audit database should only be readable by Forculus process
 5. **Tamper detection**: Investigate immediately if hash chain verification fails
 
 ## Integration Examples
@@ -431,7 +431,7 @@ bulwark audit stats --since 24h
 
 ```bash
 # Export critical events and send to SIEM
-bulwark audit export \
+forculus audit export \
   --event-type ContentInspectionTriggered \
   --event-type CostBudgetExceeded \
   --since 1h \
@@ -450,24 +450,24 @@ curl -X POST "https://siem.example.com/services/collector" \
 # daily-audit-report.sh
 
 DATE=$(date +%Y-%m-%d)
-REPORT="/var/log/bulwark/audit-report-${DATE}.txt"
+REPORT="/var/log/forculus/audit-report-${DATE}.txt"
 
-echo "Bulwark Audit Report - ${DATE}" > "${REPORT}"
+echo "Forculus Audit Report - ${DATE}" > "${REPORT}"
 echo "======================================" >> "${REPORT}"
 echo "" >> "${REPORT}"
 
 # Get statistics
-bulwark audit stats --since 24h >> "${REPORT}"
+forculus audit stats --since 24h >> "${REPORT}"
 
 echo "" >> "${REPORT}"
 echo "Critical Events:" >> "${REPORT}"
-bulwark audit query \
+forculus audit query \
   --event-type ContentInspectionTriggered \
   --since 24h \
   --limit 100 >> "${REPORT}"
 
 # Email report
-mail -s "Bulwark Audit Report ${DATE}" admin@example.com < "${REPORT}"
+mail -s "Forculus Audit Report ${DATE}" admin@example.com < "${REPORT}"
 ```
 
 ## Troubleshooting
@@ -476,17 +476,17 @@ mail -s "Bulwark Audit Report ${DATE}" admin@example.com < "${REPORT}"
 
 If you see "database is locked" errors:
 
-1. Check for other Bulwark processes: `ps aux | grep bulwark`
+1. Check for other Forculus processes: `ps aux | grep forculus`
 2. Kill stale processes if needed
 3. Wait a few seconds and retry
-4. Check file permissions: `ls -l ~/.bulwark/audit/audit.db`
+4. Check file permissions: `ls -l ~/.forculus/audit/audit.db`
 
 ### Hash Chain Verification Failed
 
 If hash chain verification fails:
 
 1. **DO NOT** delete or modify the database
-2. Export the full audit log immediately: `bulwark audit export --output audit-backup.jsonl`
+2. Export the full audit log immediately: `forculus audit export --output audit-backup.jsonl`
 3. Review recent events around the failure point
 4. Check file system integrity: `fsck` or disk diagnostics
 5. Report to security team - this may indicate tampering or corruption
@@ -496,7 +496,7 @@ If hash chain verification fails:
 
 If queries are slow:
 
-1. Add indexes: Bulwark creates indexes automatically, but verify with `sqlite3 ~/.bulwark/audit/audit.db ".schema"`
+1. Add indexes: Forculus creates indexes automatically, but verify with `sqlite3 ~/.forculus/audit/audit.db ".schema"`
 2. Reduce query scope: Use `--since` and `--limit` to narrow results
-3. Archive old events: Run `bulwark audit cleanup --older-than 180d`
+3. Archive old events: Run `forculus audit cleanup --older-than 180d`
 4. Consider read replica: Copy database to another location for analysis

@@ -1,11 +1,11 @@
-# Contributing to Bulwark
+# Contributing to Forculus
 
-Thank you for your interest in contributing to Bulwark! This document provides guidelines for contributing.
+Thank you for your interest in contributing to Forculus! This document provides guidelines for contributing.
 
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/bulwark.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/forculus.git`
 3. Create a branch: `git checkout -b my-feature`
 4. Make your changes
 5. Run the checks (see below)
@@ -44,7 +44,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 - Run `cargo fmt` before committing
 - All code must pass `cargo clippy` with `-D warnings`
 - Use `#![forbid(unsafe_code)]` in all crates
-- Follow existing patterns for error handling (`BulwarkError` variants)
+- Follow existing patterns for error handling (`ForculusError` variants)
 - Use the builder pattern (`with_*()` methods) for optional subsystem integration
 - All new fields should use `Option<Arc<T>>` with `None` = passthrough for backward compatibility
 

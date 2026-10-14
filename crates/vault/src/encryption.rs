@@ -13,7 +13,7 @@ pub struct VaultKey {
 
 impl VaultKey {
     /// Generate a new vault key.
-    pub fn generate() -> bulwark_common::Result<Self> {
+    pub fn generate() -> forculus_common::Result<Self> {
         let identity = age::x25519::Identity::generate();
         let recipient = identity.to_public();
         Ok(Self {
@@ -23,16 +23,16 @@ impl VaultKey {
     }
 
     /// Load a vault key from a file.
-    pub fn load(path: &Path) -> bulwark_common::Result<Self> {
+    pub fn load(path: &Path) -> forculus_common::Result<Self> {
         let contents = std::fs::read_to_string(path).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!(
+            forculus_common::ForculusError::Vault(format!(
                 "failed to read vault key from {}: {e}",
                 path.display()
             ))
         })?;
 
         let identity: age::x25519::Identity = contents.trim().parse().map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("invalid vault key format: {e}"))
+            forculus_common::ForculusError::Vault(format!("invalid vault key format: {e}"))
         })?;
         let recipient = identity.to_public();
 
@@ -43,10 +43,10 @@ impl VaultKey {
     }
 
     /// Save the vault key to a file. Sets restrictive permissions (0600) on Unix.
-    pub fn save(&self, path: &Path) -> bulwark_common::Result<()> {
+    pub fn save(&self, path: &Path) -> forculus_common::Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!(
+                forculus_common::ForculusError::Vault(format!(
                     "failed to create directory {}: {e}",
                     parent.display()
                 ))
@@ -55,7 +55,7 @@ impl VaultKey {
 
         let key_str = self.identity.to_string();
         std::fs::write(path, key_str.expose_secret()).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!(
+            forculus_common::ForculusError::Vault(format!(
                 "failed to write vault key to {}: {e}",
                 path.display()
             ))
@@ -66,7 +66,7 @@ impl VaultKey {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).map_err(
                 |e| {
-                    bulwark_common::BulwarkError::Vault(format!(
+                    forculus_common::ForculusError::Vault(format!(
                         "failed to set permissions on {}: {e}",
                         path.display()
                     ))
@@ -78,7 +78,7 @@ impl VaultKey {
     }
 
     /// Load a vault key if the file exists, otherwise generate and save a new one.
-    pub fn load_or_generate(path: &Path) -> bulwark_common::Result<Self> {
+    pub fn load_or_generate(path: &Path) -> forculus_common::Result<Self> {
         if path.exists() {
             Self::load(path)
         } else {
@@ -89,22 +89,22 @@ impl VaultKey {
     }
 
     /// Encrypt plaintext bytes. Returns the age-encrypted ciphertext.
-    pub fn encrypt(&self, plaintext: &[u8]) -> bulwark_common::Result<Vec<u8>> {
+    pub fn encrypt(&self, plaintext: &[u8]) -> forculus_common::Result<Vec<u8>> {
         let recipient: &dyn age::Recipient = &self.recipient;
         let encryptor =
             age::Encryptor::with_recipients(std::iter::once(recipient)).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("failed to create encryptor: {e}"))
+                forculus_common::ForculusError::Vault(format!("failed to create encryptor: {e}"))
             })?;
 
         let mut encrypted = vec![];
         let mut writer = encryptor.wrap_output(&mut encrypted).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("encryption wrap error: {e}"))
+            forculus_common::ForculusError::Vault(format!("encryption wrap error: {e}"))
         })?;
         writer.write_all(plaintext).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("encryption write error: {e}"))
+            forculus_common::ForculusError::Vault(format!("encryption write error: {e}"))
         })?;
         writer.finish().map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("encryption finish error: {e}"))
+            forculus_common::ForculusError::Vault(format!("encryption finish error: {e}"))
         })?;
 
         Ok(encrypted)
@@ -119,18 +119,18 @@ impl VaultKey {
     }
 
     /// Decrypt age-encrypted ciphertext. Returns the plaintext bytes.
-    pub fn decrypt(&self, ciphertext: &[u8]) -> bulwark_common::Result<Vec<u8>> {
+    pub fn decrypt(&self, ciphertext: &[u8]) -> forculus_common::Result<Vec<u8>> {
         let decryptor = age::Decryptor::new(ciphertext).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("decryption init error: {e}"))
+            forculus_common::ForculusError::Vault(format!("decryption init error: {e}"))
         })?;
 
         let mut reader = decryptor
             .decrypt(std::iter::once(&self.identity as &dyn age::Identity))
-            .map_err(|e| bulwark_common::BulwarkError::Vault(format!("decryption error: {e}")))?;
+            .map_err(|e| forculus_common::ForculusError::Vault(format!("decryption error: {e}")))?;
 
         let mut plaintext = vec![];
         reader.read_to_end(&mut plaintext).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("decryption read error: {e}"))
+            forculus_common::ForculusError::Vault(format!("decryption read error: {e}"))
         })?;
 
         Ok(plaintext)

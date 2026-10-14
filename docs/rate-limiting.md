@@ -1,10 +1,10 @@
 # Rate Limiting
 
-Bulwark provides flexible rate limiting to control agent request rates and costs. The system uses token bucket algorithms across multiple dimensions: session, operator, tool, and global.
+Forculus provides flexible rate limiting to control agent request rates and costs. The system uses token bucket algorithms across multiple dimensions: session, operator, tool, and global.
 
 ## Overview
 
-Rate limiting in Bulwark:
+Rate limiting in Forculus:
 
 - **Token bucket algorithm**: Smooth traffic bursts while enforcing limits
 - **Multi-dimensional**: Limit by session, operator, tool, or globally
@@ -50,7 +50,7 @@ This allows:
 
 ## Configuration
 
-Configure rate limits in `bulwark.yaml`:
+Configure rate limits in `forculus.yaml`:
 
 ```yaml
 rate_limiting:
@@ -152,7 +152,7 @@ X-RateLimit-Reset: 1676455815
 
 ### Global Limits
 
-Protects Bulwark infrastructure and downstream services:
+Protects Forculus infrastructure and downstream services:
 
 ```yaml
 rate_limiting:
@@ -162,7 +162,7 @@ rate_limiting:
 ```
 
 Use cases:
-- Prevent overload on Bulwark proxy
+- Prevent overload on Forculus proxy
 - Protect downstream APIs from aggregate traffic
 - Ensure fair sharing among all operators
 
@@ -297,7 +297,7 @@ When budget is exceeded:
 
 ```bash
 # Show current month costs per operator
-bulwark cost show
+forculus cost show
 
 # Output:
 # Operator Cost Report - February 2026
@@ -308,7 +308,7 @@ bulwark cost show
 # charlie     $50.00      $12.30      $37.70      5,678
 
 # Show detailed cost breakdown
-bulwark cost show --operator alice --detailed
+forculus cost show --operator alice --detailed
 
 # Output:
 # Cost Breakdown for alice - February 2026
@@ -328,7 +328,7 @@ bulwark cost show --operator alice --detailed
 
 ```bash
 # Show current rate limit usage
-bulwark rate-limit status
+forculus rate-limit status
 
 # Output:
 # Rate Limit Status
@@ -340,20 +340,20 @@ bulwark rate-limit status
 # Tool        60            12        48          3s
 
 # Show for specific operator
-bulwark rate-limit status --operator alice
+forculus rate-limit status --operator alice
 
 # Show for specific tool
-bulwark rate-limit status --tool "github::list-repos"
+forculus rate-limit status --tool "github::list-repos"
 ```
 
 ### Audit Rate Limit Violations
 
 ```bash
 # Show recent rate limit violations
-bulwark audit query --event-type RateLimitExceeded --since 24h
+forculus audit query --event-type RateLimitExceeded --since 24h
 
 # Export for analysis
-bulwark audit export \
+forculus audit export \
   --event-type RateLimitExceeded \
   --since 7d \
   --output rate-limit-violations.jsonl
@@ -371,7 +371,7 @@ cat rate-limit-violations.jsonl | \
 Different limits for different operator tiers:
 
 ```yaml
-# In bulwark.yaml, reference operator tier from metadata
+# In forculus.yaml, reference operator tier from metadata
 rate_limiting:
   enabled: true
   tier_based: true
@@ -528,7 +528,7 @@ Set up alerts for repeated rate limit violations:
 # rate-limit-alerts.sh
 
 # Count violations in last 5 minutes
-VIOLATIONS=$(bulwark audit query \
+VIOLATIONS=$(forculus audit query \
   --event-type RateLimitExceeded \
   --since 5m \
   --format json | jq 'length')
@@ -548,12 +548,12 @@ Set up monthly cost reports:
 # monthly-cost-report.sh
 
 MONTH=$(date +%Y-%m)
-REPORT="/var/log/bulwark/cost-report-${MONTH}.txt"
+REPORT="/var/log/forculus/cost-report-${MONTH}.txt"
 
-bulwark cost show --detailed > "${REPORT}"
+forculus cost show --detailed > "${REPORT}"
 
 # Email to finance team
-mail -s "Bulwark Cost Report ${MONTH}" finance@example.com < "${REPORT}"
+mail -s "Forculus Cost Report ${MONTH}" finance@example.com < "${REPORT}"
 ```
 
 ## Troubleshooting
@@ -562,8 +562,8 @@ mail -s "Bulwark Cost Report ${MONTH}" finance@example.com < "${REPORT}"
 
 If agents are hitting rate limits frequently:
 
-1. **Check current usage**: `bulwark rate-limit status`
-2. **Review audit logs**: `bulwark audit query --event-type RateLimitExceeded`
+1. **Check current usage**: `forculus rate-limit status`
+2. **Review audit logs**: `forculus audit query --event-type RateLimitExceeded`
 3. **Identify hot tools**: Which tools are hitting limits?
 4. **Adjust limits**: Increase RPM or burst size
 5. **Optimize agent**: Reduce unnecessary requests
@@ -572,7 +572,7 @@ If agents are hitting rate limits frequently:
 
 If operators exceed monthly budgets:
 
-1. **Review spend**: `bulwark cost show --operator alice --detailed`
+1. **Review spend**: `forculus cost show --operator alice --detailed`
 2. **Identify expensive tools**: Which tools cost the most?
 3. **Increase budget**: If usage is legitimate
 4. **Optimize usage**: Cache responses, batch requests, reduce token usage
@@ -582,8 +582,8 @@ If operators exceed monthly budgets:
 
 If some operators use much more than others:
 
-1. **Review usage**: `bulwark cost show`
-2. **Investigate high users**: `bulwark audit query --operator alice --since 7d`
+1. **Review usage**: `forculus cost show`
+2. **Investigate high users**: `forculus audit query --operator alice --since 7d`
 3. **Check for runaway agents**: Repeating patterns, errors
 4. **Adjust individual limits**: Increase or decrease per operator
 5. **Implement quotas**: Hard limits on per-operator usage

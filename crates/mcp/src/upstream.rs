@@ -2,8 +2,8 @@
 
 use std::process::Stdio;
 
-use bulwark_common::BulwarkError;
-use bulwark_config::{UpstreamServerConfig, resolve_env_vars};
+use forculus_common::ForculusError;
+use forculus_config::{UpstreamServerConfig, resolve_env_vars};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
@@ -35,7 +35,7 @@ pub struct UpstreamServer {
 
 impl UpstreamServer {
     /// Create and start an upstream server from config.
-    pub async fn new(config: UpstreamServerConfig) -> bulwark_common::Result<Self> {
+    pub async fn new(config: UpstreamServerConfig) -> forculus_common::Result<Self> {
         let name = config.name.clone();
         let mut server = Self {
             name,
@@ -72,7 +72,7 @@ impl UpstreamServer {
     }
 
     /// Start (or restart) the upstream server process.
-    pub async fn start(&mut self) -> bulwark_common::Result<()> {
+    pub async fn start(&mut self) -> forculus_common::Result<()> {
         self.status = ServerStatus::Starting;
         tracing::info!(server = %self.name, command = %self.config.command, "starting upstream server");
 
@@ -92,7 +92,7 @@ impl UpstreamServer {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| {
-                BulwarkError::Mcp(format!("failed to spawn '{}': {e}", self.config.command))
+                ForculusError::Mcp(format!("failed to spawn '{}': {e}", self.config.command))
             })?;
 
         let child_stdin = child.stdin.take().unwrap();
@@ -152,23 +152,23 @@ impl UpstreamServer {
         &mut self,
         name: &str,
         arguments: Option<serde_json::Value>,
-    ) -> bulwark_common::Result<ToolCallResult> {
+    ) -> forculus_common::Result<ToolCallResult> {
         let transport = self
             .transport
             .as_mut()
-            .ok_or_else(|| BulwarkError::Mcp(format!("server '{}' is not running", self.name)))?;
+            .ok_or_else(|| ForculusError::Mcp(format!("server '{}' is not running", self.name)))?;
         client::call_tool(transport, &mut self.next_request_id, name, arguments).await
     }
 
     /// Attempt to restart the server after a failure, with exponential backoff.
-    pub async fn restart_with_backoff(&mut self) -> bulwark_common::Result<()> {
+    pub async fn restart_with_backoff(&mut self) -> forculus_common::Result<()> {
         let current_retries = match &self.status {
             ServerStatus::Failed { retries, .. } => *retries,
             _ => 0,
         };
 
         if current_retries >= MAX_RETRIES {
-            return Err(BulwarkError::Mcp(format!(
+            return Err(ForculusError::Mcp(format!(
                 "server '{}' exceeded max retries ({MAX_RETRIES})",
                 self.name
             )));

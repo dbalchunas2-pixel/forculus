@@ -4,7 +4,7 @@
 //! When a request is processed, the vault resolves which credential to inject
 //! based on the tool being called and the session's scope.
 
-use bulwark_policy::glob::GlobPattern;
+use forculus_policy::glob::GlobPattern;
 use serde::{Deserialize, Serialize};
 
 use crate::session::Session;
@@ -164,18 +164,18 @@ fn scope_specificity(scope: &BindingScope) -> usize {
 }
 
 /// Load bindings from a YAML file.
-pub fn load_bindings(path: &std::path::Path) -> bulwark_common::Result<Vec<CredentialBinding>> {
+pub fn load_bindings(path: &std::path::Path) -> forculus_common::Result<Vec<CredentialBinding>> {
     if !path.exists() {
         return Ok(Vec::new());
     }
     let contents = std::fs::read_to_string(path).map_err(|e| {
-        bulwark_common::BulwarkError::Vault(format!(
+        forculus_common::ForculusError::Vault(format!(
             "failed to read bindings from {}: {e}",
             path.display()
         ))
     })?;
     let file: BindingsFile = serde_yaml::from_str(&contents)
-        .map_err(|e| bulwark_common::BulwarkError::Vault(format!("invalid bindings YAML: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Vault(format!("invalid bindings YAML: {e}")))?;
     Ok(file.bindings)
 }
 

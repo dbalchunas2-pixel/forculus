@@ -1,4 +1,4 @@
-//! `bulwark__session_list` — list active sessions in the vault.
+//! `forculus__session_list` — list active sessions in the vault.
 
 use crate::types::{Tool, ToolCallResult};
 
@@ -6,7 +6,7 @@ use super::{BuiltinContext, error_result, json_result};
 
 pub fn tool_definition() -> Tool {
     Tool {
-        name: "bulwark__session_list".to_string(),
+        name: "forculus__session_list".to_string(),
         description: Some("List active sessions in the vault".to_string()),
         input_schema: serde_json::json!({
             "type": "object",

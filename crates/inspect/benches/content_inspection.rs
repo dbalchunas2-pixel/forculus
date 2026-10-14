@@ -2,8 +2,8 @@
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
-use bulwark_inspect::config::InspectionConfig;
-use bulwark_inspect::scanner::ContentScanner;
+use forculus_inspect::config::InspectionConfig;
+use forculus_inspect::scanner::ContentScanner;
 
 fn generate_text(size: usize) -> String {
     let base = "The quick brown fox jumps over the lazy dog. ";
@@ -87,13 +87,13 @@ fn bench_pattern_count(c: &mut Criterion) {
     // With extra custom patterns.
     let config = InspectionConfig {
         custom_patterns: (0..12)
-            .map(|i| bulwark_inspect::config::CustomPattern {
+            .map(|i| forculus_inspect::config::CustomPattern {
                 id: format!("custom-{i}"),
                 description: format!("Custom pattern {i}"),
                 pattern: format!("CUSTOM_PATTERN_{i}_[0-9]+"),
-                severity: bulwark_inspect::Severity::Low,
-                category: bulwark_inspect::FindingCategory::Custom("custom".into()),
-                action: bulwark_inspect::FindingAction::Log,
+                severity: forculus_inspect::Severity::Low,
+                category: forculus_inspect::FindingCategory::Custom("custom".into()),
+                action: forculus_inspect::FindingAction::Log,
             })
             .collect(),
         ..Default::default()

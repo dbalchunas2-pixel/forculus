@@ -1,6 +1,6 @@
 //! Stdio transport — newline-delimited JSON over `AsyncRead`/`AsyncWrite`.
 
-use bulwark_common::BulwarkError;
+use forculus_common::ForculusError;
 use serde::Serialize;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 
@@ -24,7 +24,7 @@ impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> StdioTransport<R, W> {
     }
 
     /// Read the next JSON-RPC message.  Returns `None` on EOF.
-    pub async fn read_message(&mut self) -> bulwark_common::Result<Option<JsonRpcMessage>> {
+    pub async fn read_message(&mut self) -> forculus_common::Result<Option<JsonRpcMessage>> {
         let mut line = String::new();
         loop {
             line.clear();
@@ -32,7 +32,7 @@ impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> StdioTransport<R, W> {
                 .reader
                 .read_line(&mut line)
                 .await
-                .map_err(|e| BulwarkError::Mcp(format!("read error: {e}")))?;
+                .map_err(|e| ForculusError::Mcp(format!("read error: {e}")))?;
             if n == 0 {
                 return Ok(None); // EOF
             }
@@ -51,21 +51,21 @@ impl<R: AsyncRead + Unpin, W: AsyncWrite + Unpin> StdioTransport<R, W> {
     }
 
     /// Write a JSON-RPC message (serialised as JSON + newline).
-    pub async fn write_message(&mut self, msg: &impl Serialize) -> bulwark_common::Result<()> {
+    pub async fn write_message(&mut self, msg: &impl Serialize) -> forculus_common::Result<()> {
         let json = serde_json::to_string(msg)
-            .map_err(|e| BulwarkError::Mcp(format!("serialization error: {e}")))?;
+            .map_err(|e| ForculusError::Mcp(format!("serialization error: {e}")))?;
         self.writer
             .write_all(json.as_bytes())
             .await
-            .map_err(|e| BulwarkError::Mcp(format!("write error: {e}")))?;
+            .map_err(|e| ForculusError::Mcp(format!("write error: {e}")))?;
         self.writer
             .write_all(b"\n")
             .await
-            .map_err(|e| BulwarkError::Mcp(format!("write error: {e}")))?;
+            .map_err(|e| ForculusError::Mcp(format!("write error: {e}")))?;
         self.writer
             .flush()
             .await
-            .map_err(|e| BulwarkError::Mcp(format!("flush error: {e}")))?;
+            .map_err(|e| ForculusError::Mcp(format!("flush error: {e}")))?;
         Ok(())
     }
 }

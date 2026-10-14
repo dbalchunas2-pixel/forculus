@@ -1,4 +1,4 @@
-//! `bulwark init [path]` — scaffold a new Bulwark project directory.
+//! `forculus init [path]` — scaffold a new Forculus project directory.
 
 use std::path::Path;
 
@@ -12,7 +12,7 @@ fn offer_ca_install(ca_cert: &Path) -> bool {
 
     eprintln!();
     eprint!(
-        "Install CA certificate system-wide? This allows Bulwark to inspect HTTPS traffic. [y/N] "
+        "Install CA certificate system-wide? This allows Forculus to inspect HTTPS traffic. [y/N] "
     );
 
     let mut input = String::new();
@@ -41,10 +41,10 @@ pub fn run(path: Option<&Path>) -> Result<()> {
         .with_context(|| format!("creating directory {}", target.display()))?;
 
     // Write default config.
-    let config_path = target.join("bulwark.yaml");
+    let config_path = target.join("forculus.yaml");
     if !config_path.exists() {
-        std::fs::write(&config_path, include_str!("../../../../bulwark.yaml"))
-            .context("writing bulwark.yaml")?;
+        std::fs::write(&config_path, include_str!("../../../../forculus.yaml"))
+            .context("writing forculus.yaml")?;
         println!("  created {}", config_path.display());
     }
 
@@ -55,7 +55,7 @@ pub fn run(path: Option<&Path>) -> Result<()> {
     if !global_policy.exists() {
         std::fs::write(
             &global_policy,
-            r#"# Bulwark global policy — starter template
+            r#"# Forculus global policy — starter template
 #
 # This policy allows all read operations and denies everything else.
 # Customize the rules below to match your governance requirements.
@@ -93,28 +93,28 @@ rules:
     }
 
     // Generate CA if it doesn't already exist.
-    let ca_dir = bulwark_config::expand_tilde("~/.bulwark/ca");
+    let ca_dir = forculus_config::expand_tilde("~/.forculus/ca");
     let ca_cert = Path::new(&ca_dir).join("ca.pem");
     if !ca_cert.exists() {
         // Generating the CA has the side-effect of writing the files.
-        bulwark_proxy::tls::TlsState::new("~/.bulwark/ca").context("generating CA")?;
+        forculus_proxy::tls::TlsState::new("~/.forculus/ca").context("generating CA")?;
         println!("  generated CA in {ca_dir}");
     }
 
     // Generate vault key if it doesn't already exist.
-    let vault_key_path = bulwark_config::expand_tilde("~/.bulwark/vault-key.age");
+    let vault_key_path = forculus_config::expand_tilde("~/.forculus/vault-key.age");
     if !Path::new(&vault_key_path).exists() {
-        bulwark_vault::encryption::VaultKey::load_or_generate(Path::new(&vault_key_path))
+        forculus_vault::encryption::VaultKey::load_or_generate(Path::new(&vault_key_path))
             .context("generating vault key")?;
         println!("  generated vault key at {vault_key_path}");
     }
 
     // Create credentials directory.
-    let creds_dir = bulwark_config::expand_tilde("~/.bulwark/credentials");
+    let creds_dir = forculus_config::expand_tilde("~/.forculus/credentials");
     std::fs::create_dir_all(&creds_dir).context("creating credentials directory")?;
 
     // Create empty bindings file if it doesn't exist.
-    let bindings_path = bulwark_config::expand_tilde("~/.bulwark/bindings.yaml");
+    let bindings_path = forculus_config::expand_tilde("~/.forculus/bindings.yaml");
     if !Path::new(&bindings_path).exists() {
         std::fs::write(
             &bindings_path,
@@ -138,12 +138,12 @@ bindings: []
     let ca_installed = offer_ca_install(&ca_cert);
 
     println!();
-    println!("Bulwark project initialised in {}", target.display());
+    println!("Forculus project initialised in {}", target.display());
     println!();
     println!("Next steps:");
-    println!("  1. Edit bulwark.yaml to configure the proxy");
+    println!("  1. Edit forculus.yaml to configure the proxy");
     if !ca_installed {
-        println!("  2. Trust the CA: bulwark ca install  (or set env vars manually)");
+        println!("  2. Trust the CA: forculus ca install  (or set env vars manually)");
         println!("     export NODE_EXTRA_CA_CERTS=\"{}/ca.pem\"", ca_dir);
         println!("     export REQUESTS_CA_BUNDLE=\"{}/ca.pem\"", ca_dir);
         println!("     export SSL_CERT_FILE=\"{}/ca.pem\"", ca_dir);
@@ -151,11 +151,11 @@ bindings: []
         println!("  2. CA is already trusted system-wide");
     }
     println!(
-        "  {}. Add credentials with `bulwark cred add <name>`",
+        "  {}. Add credentials with `forculus cred add <name>`",
         if ca_installed { 2 } else { 3 }
     );
     println!(
-        "  {}. Run `bulwark proxy start` to launch the proxy",
+        "  {}. Run `forculus proxy start` to launch the proxy",
         if ca_installed { 3 } else { 4 }
     );
 

@@ -1,6 +1,6 @@
 //! MCP client — protocol interactions with an upstream tool server.
 
-use bulwark_common::BulwarkError;
+use forculus_common::ForculusError;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::transport::stdio::StdioTransport;
@@ -15,7 +15,7 @@ async fn request<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
     request_id: &mut i64,
     method: &str,
     params: Option<serde_json::Value>,
-) -> bulwark_common::Result<JsonRpcResponse> {
+) -> forculus_common::Result<JsonRpcResponse> {
     let id = *request_id;
     *request_id += 1;
 
@@ -31,7 +31,7 @@ async fn request<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
     // Skip any notifications that arrive in between.
     loop {
         let msg = transport.read_message().await?.ok_or_else(|| {
-            BulwarkError::Mcp(format!(
+            ForculusError::Mcp(format!(
                 "upstream closed while awaiting response to {method}"
             ))
         })?;
@@ -55,7 +55,7 @@ async fn request<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
 pub async fn initialize<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
     transport: &mut StdioTransport<R, W>,
     request_id: &mut i64,
-) -> bulwark_common::Result<InitializeResult> {
+) -> forculus_common::Result<InitializeResult> {
     let resp = request(
         transport,
         request_id,
@@ -64,15 +64,15 @@ pub async fn initialize<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
             "protocolVersion": "2024-11-05",
             "capabilities": {},
             "clientInfo": {
-                "name": "bulwark",
-                "version": bulwark_common::VERSION
+                "name": "forculus",
+                "version": forculus_common::VERSION
             }
         })),
     )
     .await?;
 
     if let Some(err) = resp.error {
-        return Err(BulwarkError::Mcp(format!(
+        return Err(ForculusError::Mcp(format!(
             "initialize failed: {}",
             err.message
         )));
@@ -80,9 +80,9 @@ pub async fn initialize<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
 
     let result: InitializeResult = serde_json::from_value(
         resp.result
-            .ok_or_else(|| BulwarkError::Mcp("initialize response missing result".into()))?,
+            .ok_or_else(|| ForculusError::Mcp("initialize response missing result".into()))?,
     )
-    .map_err(|e| BulwarkError::Mcp(format!("invalid initialize result: {e}")))?;
+    .map_err(|e| ForculusError::Mcp(format!("invalid initialize result: {e}")))?;
 
     // Send initialized notification.
     let notif = JsonRpcNotification {
@@ -99,11 +99,11 @@ pub async fn initialize<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
 pub async fn list_tools<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
     transport: &mut StdioTransport<R, W>,
     request_id: &mut i64,
-) -> bulwark_common::Result<Vec<Tool>> {
+) -> forculus_common::Result<Vec<Tool>> {
     let resp = request(transport, request_id, "tools/list", None).await?;
 
     if let Some(err) = resp.error {
-        return Err(BulwarkError::Mcp(format!(
+        return Err(ForculusError::Mcp(format!(
             "tools/list failed: {}",
             err.message
         )));
@@ -111,7 +111,7 @@ pub async fn list_tools<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
 
     let result = resp
         .result
-        .ok_or_else(|| BulwarkError::Mcp("tools/list response missing result".into()))?;
+        .ok_or_else(|| ForculusError::Mcp("tools/list response missing result".into()))?;
 
     let tools: Vec<Tool> = serde_json::from_value(
         result
@@ -119,7 +119,7 @@ pub async fn list_tools<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
             .cloned()
             .unwrap_or(serde_json::Value::Array(vec![])),
     )
-    .map_err(|e| BulwarkError::Mcp(format!("invalid tools/list result: {e}")))?;
+    .map_err(|e| ForculusError::Mcp(format!("invalid tools/list result: {e}")))?;
 
     Ok(tools)
 }
@@ -130,7 +130,7 @@ pub async fn call_tool<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
     request_id: &mut i64,
     name: &str,
     arguments: Option<serde_json::Value>,
-) -> bulwark_common::Result<ToolCallResult> {
+) -> forculus_common::Result<ToolCallResult> {
     let params = ToolCallParams {
         name: name.to_string(),
         arguments,
@@ -145,7 +145,7 @@ pub async fn call_tool<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
     .await?;
 
     if let Some(err) = resp.error {
-        return Err(BulwarkError::Mcp(format!(
+        return Err(ForculusError::Mcp(format!(
             "tools/call failed: {}",
             err.message
         )));
@@ -153,9 +153,9 @@ pub async fn call_tool<R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
 
     let result: ToolCallResult = serde_json::from_value(
         resp.result
-            .ok_or_else(|| BulwarkError::Mcp("tools/call response missing result".into()))?,
+            .ok_or_else(|| ForculusError::Mcp("tools/call response missing result".into()))?,
     )
-    .map_err(|e| BulwarkError::Mcp(format!("invalid tools/call result: {e}")))?;
+    .map_err(|e| ForculusError::Mcp(format!("invalid tools/call result: {e}")))?;
 
     Ok(result)
 }

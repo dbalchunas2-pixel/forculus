@@ -1,10 +1,10 @@
 //! HTTPS CONNECT tunnelling with TLS man-in-the-middle.
 //!
-//! When a client sends `CONNECT host:port`, Bulwark:
+//! When a client sends `CONNECT host:port`, Forculus:
 //! 1. Responds with `200 Connection Established`
 //! 2. Upgrades the connection to get the raw TCP stream
 //! 3. Performs a TLS handshake with the client (presenting a leaf cert for
-//!    the target hostname, signed by Bulwark's CA)
+//!    the target hostname, signed by Forculus's CA)
 //! 4. Connects to the real server over TLS using system root certs
 //! 5. Reads decrypted HTTP from the client, forwards to the server, and
 //!    returns the response — logging every request
@@ -25,7 +25,7 @@ use rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
 use uuid::Uuid;
 
-use bulwark_audit::event::{
+use forculus_audit::event::{
     AuditEvent, Channel, EventOutcome, EventType, RequestInfo, SessionInfo,
 };
 
@@ -141,8 +141,8 @@ pub async fn handle_connect(
 
     // Evaluate policy on the CONNECT target if engine is configured.
     if let Some(engine) = &ctx.policy_engine {
-        use bulwark_policy::context::RequestContext;
-        use bulwark_policy::verdict::Verdict;
+        use forculus_policy::context::RequestContext;
+        use forculus_policy::verdict::Verdict;
 
         let pctx = RequestContext::new(&target_host, format!("CONNECT {}", target_authority));
         let eval = engine.evaluate(&pctx);
@@ -214,7 +214,7 @@ async fn mitm_tunnel(
     _target_authority: &str,
     tls_state: Arc<TlsState>,
     ctx: ProxyRequestContext,
-) -> bulwark_common::Result<()> {
+) -> forculus_common::Result<()> {
     // --- Client-side TLS (we are the "server" to the client) ---
     let server_config = ServerConfig::builder()
         .with_no_client_auth()
@@ -224,16 +224,16 @@ async fn mitm_tunnel(
     let client_tls = acceptor
         .accept(TokioIo::new(upgraded))
         .await
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("client TLS handshake: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("client TLS handshake: {e}")))?;
 
     // --- Server-side TLS (we are the "client" to the real server) ---
     let server_name = rustls::pki_types::ServerName::try_from(target_host.to_string())
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("invalid server name: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("invalid server name: {e}")))?;
 
     let tcp = tokio::net::TcpStream::connect((target_host, target_port))
         .await
         .map_err(|e| {
-            bulwark_common::BulwarkError::Proxy(format!(
+            forculus_common::ForculusError::Proxy(format!(
                 "connect to {target_host}:{target_port}: {e}"
             ))
         })?;
@@ -242,7 +242,7 @@ async fn mitm_tunnel(
         .server_connector
         .connect(server_name, tcp)
         .await
-        .map_err(|e| bulwark_common::BulwarkError::Tls(format!("server TLS handshake: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Tls(format!("server TLS handshake: {e}")))?;
 
     // Set up a hyper HTTP/1 server on the client side to read decrypted
     // requests, and use a hyper client to forward them over the server TLS
@@ -264,7 +264,7 @@ async fn mitm_tunnel(
         .with_upgrades();
 
     conn.await
-        .map_err(|e| bulwark_common::BulwarkError::Proxy(format!("MITM connection: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Proxy(format!("MITM connection: {e}")))?;
 
     Ok(())
 }
@@ -290,12 +290,12 @@ async fn forward_tls_request(
     let url = format!("https://{target_host}{path}");
     let host = target_host.to_string();
 
-    // Validate session from X-Bulwark-Session header if vault is configured.
+    // Validate session from X-Forculus-Session header if vault is configured.
     let session = if let Some(ref vault) = ctx.vault {
         let vault_guard = vault.lock();
         let token = req
             .headers()
-            .get("x-bulwark-session")
+            .get("x-forculus-session")
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string());
 
@@ -352,7 +352,7 @@ async fn forward_tls_request(
                         resource: None,
                         target: url.clone(),
                     })
-                    .error(bulwark_audit::event::ErrorInfo {
+                    .error(forculus_audit::event::ErrorInfo {
                         category: "rate_limit".to_string(),
                         message: format!(
                             "rule={} dimension={}",
@@ -380,8 +380,8 @@ async fn forward_tls_request(
 
     // Evaluate policy if engine is configured.
     if let Some(engine) = &ctx.policy_engine {
-        use bulwark_policy::context::RequestContext;
-        use bulwark_policy::verdict::Verdict;
+        use forculus_policy::context::RequestContext;
+        use forculus_policy::verdict::Verdict;
 
         let mut pctx = RequestContext::new(&resolved_tool, &resolved_action);
         if let Some(ref s) = session {
@@ -424,7 +424,7 @@ async fn forward_tls_request(
     let injection = if let (Some(vault), Some(session)) = (&ctx.vault, &session) {
         let vault_guard = vault.lock();
         match vault_guard.resolve_credential(target_host, session) {
-            Ok(Some(cred)) => Some(bulwark_vault::injection::http_injection(&cred)),
+            Ok(Some(cred)) => Some(forculus_vault::injection::http_injection(&cred)),
             Ok(None) => None,
             Err(e) => {
                 tracing::warn!(error = %e, "credential resolution failed");
@@ -446,7 +446,7 @@ async fn forward_tls_request(
     let request_bytes = body_bytes.len() as u64;
 
     // Inspect request body if scanner is configured and request inspection is enabled.
-    let mut inspection_info: Option<bulwark_audit::event::InspectionInfo> = None;
+    let mut inspection_info: Option<forculus_audit::event::InspectionInfo> = None;
     let body_bytes = if let Some(scanner) = ctx
         .content_scanner
         .as_ref()
@@ -465,12 +465,12 @@ async fn forward_tls_request(
         }
         if result.should_redact {
             let body_str = std::str::from_utf8(&body_bytes).unwrap_or_default();
-            let redacted = bulwark_inspect::redact_text(body_str, &result.findings);
+            let redacted = forculus_inspect::redact_text(body_str, &result.findings);
             tracing::info!(
                 finding_count = result.findings.len(),
                 "redacted request body before forwarding"
             );
-            inspection_info = Some(bulwark_audit::event::InspectionInfo {
+            inspection_info = Some(forculus_audit::event::InspectionInfo {
                 finding_count: result.findings.len() as u64,
                 action_taken: "redacted".to_string(),
                 max_severity: result
@@ -479,7 +479,7 @@ async fn forward_tls_request(
             });
             Bytes::from(redacted.into_bytes())
         } else if !result.findings.is_empty() {
-            inspection_info = Some(bulwark_audit::event::InspectionInfo {
+            inspection_info = Some(forculus_audit::event::InspectionInfo {
                 finding_count: result.findings.len() as u64,
                 action_taken: "logged".to_string(),
                 max_severity: result
@@ -582,7 +582,7 @@ async fn forward_tls_request(
 
         for (name, value) in &parts.headers {
             if !is_hop_by_hop(name.as_str())
-                && !is_bulwark_internal(name.as_str())
+                && !is_forculus_internal(name.as_str())
                 && !strip_set.contains(&name.as_str().to_lowercase())
                 && name.as_str() != "content-length"
             {
@@ -675,12 +675,12 @@ async fn forward_tls_request(
                     }
                     if inspection.should_redact {
                         let body_str = std::str::from_utf8(&resp_bytes).unwrap_or_default();
-                        let redacted = bulwark_inspect::redact_text(body_str, &inspection.findings);
+                        let redacted = forculus_inspect::redact_text(body_str, &inspection.findings);
                         tracing::info!(
                             finding_count = inspection.findings.len(),
                             "redacted upstream HTTPS response before returning to agent"
                         );
-                        inspection_info = Some(bulwark_audit::event::InspectionInfo {
+                        inspection_info = Some(forculus_audit::event::InspectionInfo {
                             finding_count: inspection.findings.len() as u64,
                             action_taken: "redacted".to_string(),
                             max_severity: inspection
@@ -694,7 +694,7 @@ async fn forward_tls_request(
                         );
                         redacted_bytes
                     } else if !inspection.findings.is_empty() {
-                        inspection_info = Some(bulwark_audit::event::InspectionInfo {
+                        inspection_info = Some(forculus_audit::event::InspectionInfo {
                             finding_count: inspection.findings.len() as u64,
                             action_taken: "logged".to_string(),
                             max_severity: inspection
@@ -745,7 +745,7 @@ async fn forward_tls_request(
                                         resource: None,
                                         target: url.clone(),
                                     })
-                                    .error(bulwark_audit::event::ErrorInfo {
+                                    .error(forculus_audit::event::ErrorInfo {
                                         category: "budget".to_string(),
                                         message: e.to_string(),
                                     });
@@ -810,7 +810,7 @@ async fn forward_tls_request(
                             resource: None,
                             target: url.clone(),
                         })
-                        .error(bulwark_audit::event::ErrorInfo {
+                        .error(forculus_audit::event::ErrorInfo {
                             category: "upstream".to_string(),
                             message: e.to_string(),
                         })
@@ -849,16 +849,16 @@ fn is_hop_by_hop(name: &str) -> bool {
     )
 }
 
-/// Returns `true` for Bulwark-internal headers that must be stripped before
+/// Returns `true` for Forculus-internal headers that must be stripped before
 /// forwarding to upstream servers.
-fn is_bulwark_internal(name: &str) -> bool {
+fn is_forculus_internal(name: &str) -> bool {
     matches!(
         name.to_lowercase().as_str(),
-        "x-bulwark-session"
-            | "x-bulwark-operator"
-            | "x-bulwark-team"
-            | "x-bulwark-project"
-            | "x-bulwark-environment"
+        "x-forculus-session"
+            | "x-forculus-operator"
+            | "x-forculus-team"
+            | "x-forculus-project"
+            | "x-forculus-environment"
     )
 }
 

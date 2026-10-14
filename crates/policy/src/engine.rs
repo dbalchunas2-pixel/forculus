@@ -1,4 +1,4 @@
-//! Policy evaluation engine — the core of Bulwark policy enforcement.
+//! Policy evaluation engine — the core of Forculus policy enforcement.
 
 use std::path::Path;
 use std::sync::Arc;

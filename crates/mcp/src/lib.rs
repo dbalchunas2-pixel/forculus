@@ -1,6 +1,6 @@
-//! Bulwark MCP — governance gateway for the Model Context Protocol.
+//! Forculus MCP — governance gateway for the Model Context Protocol.
 //!
-//! Bulwark acts as an MCP server (agent-facing) and as an MCP client
+//! Forculus acts as an MCP server (agent-facing) and as an MCP client
 //! (connecting to upstream tool servers).  Every tool call passes through
 //! the gateway — logged now, enforced by policy later.
 #![forbid(unsafe_code)]

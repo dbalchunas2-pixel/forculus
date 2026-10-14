@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub struct McpSession {
     /// The MCP session identifier (UUID).
     pub id: String,
-    /// Optional Bulwark vault session token for this MCP session.
+    /// Optional Forculus vault session token for this MCP session.
     pub vault_token: Option<String>,
     /// Whether the client has completed the MCP initialize handshake.
     pub initialized: bool,

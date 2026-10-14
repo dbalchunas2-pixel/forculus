@@ -3,7 +3,7 @@
 //! This establishes the wire format from day one.  Agents that understand
 //! the `_meta.governance` field can use it; others ignore it.
 
-use bulwark_policy::verdict::PolicyEvaluation;
+use forculus_policy::verdict::PolicyEvaluation;
 
 /// Return governance metadata based on a real policy evaluation.
 pub fn governance_metadata(evaluation: &PolicyEvaluation) -> serde_json::Value {

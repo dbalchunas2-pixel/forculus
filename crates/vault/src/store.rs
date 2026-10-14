@@ -25,23 +25,23 @@ pub struct Vault {
 
 impl Vault {
     /// Open a vault from the given configuration.
-    pub fn open(config: &bulwark_config::VaultConfig) -> bulwark_common::Result<Self> {
-        let key_path = PathBuf::from(bulwark_config::expand_tilde(&config.key_path));
-        let credentials_dir = PathBuf::from(bulwark_config::expand_tilde(&config.credentials_dir));
-        let bindings_path = PathBuf::from(bulwark_config::expand_tilde(&config.bindings_path));
+    pub fn open(config: &forculus_config::VaultConfig) -> forculus_common::Result<Self> {
+        let key_path = PathBuf::from(forculus_config::expand_tilde(&config.key_path));
+        let credentials_dir = PathBuf::from(forculus_config::expand_tilde(&config.credentials_dir));
+        let bindings_path = PathBuf::from(forculus_config::expand_tilde(&config.bindings_path));
         let sessions_db_path =
-            PathBuf::from(bulwark_config::expand_tilde(&config.sessions_db_path));
+            PathBuf::from(forculus_config::expand_tilde(&config.sessions_db_path));
 
         let vault_key = VaultKey::load_or_generate(&key_path)?;
         std::fs::create_dir_all(&credentials_dir).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!(
+            forculus_common::ForculusError::Vault(format!(
                 "failed to create credentials directory: {e}"
             ))
         })?;
 
         let entries = load_credential_entries(&credentials_dir)?;
         let bindings = load_bindings(&bindings_path)?;
-        let pepper = vault_key.derive_key("bulwark session token pepper v1");
+        let pepper = vault_key.derive_key("forculus session token pepper v1");
         let session_store = SessionStore::open(&sessions_db_path, pepper)?;
 
         Ok(Self {
@@ -67,13 +67,13 @@ impl Vault {
         credential: &Credential,
         credential_type: &CredentialType,
         description: Option<&str>,
-    ) -> bulwark_common::Result<()> {
+    ) -> forculus_common::Result<()> {
         let plaintext = credential_to_bytes(credential);
         let ciphertext = self.vault_key.encrypt(&plaintext)?;
 
         let age_path = self.credentials_dir.join(format!("{name}.age"));
         std::fs::write(&age_path, &ciphertext).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("failed to write credential file: {e}"))
+            forculus_common::ForculusError::Vault(format!("failed to write credential file: {e}"))
         })?;
 
         let now = Utc::now();
@@ -87,10 +87,10 @@ impl Vault {
 
         let meta_path = self.credentials_dir.join(format!("{name}.meta.json"));
         let meta_json = serde_json::to_string_pretty(&entry).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("failed to serialize metadata: {e}"))
+            forculus_common::ForculusError::Vault(format!("failed to serialize metadata: {e}"))
         })?;
         std::fs::write(&meta_path, meta_json).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("failed to write metadata file: {e}"))
+            forculus_common::ForculusError::Vault(format!("failed to write metadata file: {e}"))
         })?;
 
         self.entries.insert(name.to_string(), entry);
@@ -98,14 +98,14 @@ impl Vault {
     }
 
     /// Retrieve and decrypt a credential by name.
-    pub fn get_credential(&self, name: &str) -> bulwark_common::Result<Credential> {
+    pub fn get_credential(&self, name: &str) -> forculus_common::Result<Credential> {
         let entry = self.entries.get(name).ok_or_else(|| {
-            bulwark_common::BulwarkError::Vault(format!("credential not found: {name}"))
+            forculus_common::ForculusError::Vault(format!("credential not found: {name}"))
         })?;
 
         let age_path = self.credentials_dir.join(format!("{name}.age"));
         let ciphertext = std::fs::read(&age_path).map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("failed to read credential file: {e}"))
+            forculus_common::ForculusError::Vault(format!("failed to read credential file: {e}"))
         })?;
 
         let plaintext = self.vault_key.decrypt(&ciphertext)?;
@@ -113,9 +113,9 @@ impl Vault {
     }
 
     /// Remove a credential (deletes both the encrypted file and metadata).
-    pub fn remove_credential(&mut self, name: &str) -> bulwark_common::Result<()> {
+    pub fn remove_credential(&mut self, name: &str) -> forculus_common::Result<()> {
         if !self.entries.contains_key(name) {
-            return Err(bulwark_common::BulwarkError::Vault(format!(
+            return Err(forculus_common::ForculusError::Vault(format!(
                 "credential not found: {name}"
             )));
         }
@@ -125,14 +125,14 @@ impl Vault {
 
         if age_path.exists() {
             std::fs::remove_file(&age_path).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!(
+                forculus_common::ForculusError::Vault(format!(
                     "failed to remove credential file: {e}"
                 ))
             })?;
         }
         if meta_path.exists() {
             std::fs::remove_file(&meta_path).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!("failed to remove metadata file: {e}"))
+                forculus_common::ForculusError::Vault(format!("failed to remove metadata file: {e}"))
             })?;
         }
 
@@ -152,7 +152,7 @@ impl Vault {
         &self,
         tool: &str,
         session: &Session,
-    ) -> bulwark_common::Result<Option<Credential>> {
+    ) -> forculus_common::Result<Option<Credential>> {
         if let Some(cred_name) = resolve_binding(&self.bindings, tool, session) {
             let credential = self.get_credential(&cred_name)?;
             Ok(Some(credential))
@@ -162,34 +162,34 @@ impl Vault {
     }
 
     /// Create a session.
-    pub fn create_session(&self, params: CreateSessionParams) -> bulwark_common::Result<Session> {
+    pub fn create_session(&self, params: CreateSessionParams) -> forculus_common::Result<Session> {
         self.session_store.create(params)
     }
 
     /// Validate a session token.
-    pub fn validate_session(&self, token: &str) -> bulwark_common::Result<Option<Session>> {
+    pub fn validate_session(&self, token: &str) -> forculus_common::Result<Option<Session>> {
         self.session_store.validate(token)
     }
 
     /// Revoke a session.
-    pub fn revoke_session(&self, session_id: &str) -> bulwark_common::Result<()> {
+    pub fn revoke_session(&self, session_id: &str) -> forculus_common::Result<()> {
         self.session_store.revoke(session_id)
     }
 
     /// List sessions.
-    pub fn list_sessions(&self, include_revoked: bool) -> bulwark_common::Result<Vec<Session>> {
+    pub fn list_sessions(&self, include_revoked: bool) -> forculus_common::Result<Vec<Session>> {
         self.session_store.list(include_revoked)
     }
 
     /// Reload bindings from file.
-    pub fn reload_bindings(&mut self) -> bulwark_common::Result<()> {
+    pub fn reload_bindings(&mut self) -> forculus_common::Result<()> {
         self.bindings = load_bindings(&self.bindings_path)?;
         Ok(())
     }
 }
 
 /// Load credential entry metadata from `.meta.json` sidecar files.
-fn load_credential_entries(dir: &Path) -> bulwark_common::Result<HashMap<String, CredentialEntry>> {
+fn load_credential_entries(dir: &Path) -> forculus_common::Result<HashMap<String, CredentialEntry>> {
     let mut entries = HashMap::new();
 
     if !dir.exists() {
@@ -197,12 +197,12 @@ fn load_credential_entries(dir: &Path) -> bulwark_common::Result<HashMap<String,
     }
 
     let read_dir = std::fs::read_dir(dir).map_err(|e| {
-        bulwark_common::BulwarkError::Vault(format!("failed to read credentials directory: {e}"))
+        forculus_common::ForculusError::Vault(format!("failed to read credentials directory: {e}"))
     })?;
 
     for entry in read_dir {
         let entry = entry.map_err(|e| {
-            bulwark_common::BulwarkError::Vault(format!("directory entry error: {e}"))
+            forculus_common::ForculusError::Vault(format!("directory entry error: {e}"))
         })?;
         let path = entry.path();
 
@@ -213,13 +213,13 @@ fn load_credential_entries(dir: &Path) -> bulwark_common::Result<HashMap<String,
                 .is_some_and(|n| n.ends_with(".meta.json"))
         {
             let contents = std::fs::read_to_string(&path).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!(
+                forculus_common::ForculusError::Vault(format!(
                     "failed to read {}: {e}",
                     path.display()
                 ))
             })?;
             let cred_entry: CredentialEntry = serde_json::from_str(&contents).map_err(|e| {
-                bulwark_common::BulwarkError::Vault(format!(
+                forculus_common::ForculusError::Vault(format!(
                     "invalid metadata in {}: {e}",
                     path.display()
                 ))
@@ -238,7 +238,7 @@ mod tests {
 
     fn test_vault() -> (tempfile::TempDir, Vault) {
         let dir = tempfile::tempdir().unwrap();
-        let config = bulwark_config::VaultConfig {
+        let config = forculus_config::VaultConfig {
             key_path: dir
                 .path()
                 .join("vault-key.age")

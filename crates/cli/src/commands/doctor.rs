@@ -1,10 +1,10 @@
-//! `bulwark doctor` — diagnose common setup issues.
+//! `forculus doctor` — diagnose common setup issues.
 
 use std::net::TcpListener;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_config::load_config;
+use forculus_config::load_config;
 use colored::Colorize;
 use serde::Serialize;
 
@@ -64,7 +64,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
             checks.push(Check::fail(
                 "config",
                 &format!("Failed to load config: {e}"),
-                Some("Create a bulwark.yaml or run: bulwark init"),
+                Some("Create a forculus.yaml or run: forculus init"),
             ));
             None
         }
@@ -75,9 +75,9 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
         let policies_dir = &config.policy.policies_dir;
         let dir = Path::new(policies_dir);
         if dir.exists() {
-            let result = bulwark_policy::validation::validate_policies(dir);
+            let result = forculus_policy::validation::validate_policies(dir);
             if result.is_ok() {
-                let engine = bulwark_policy::engine::PolicyEngine::from_directory(dir);
+                let engine = forculus_policy::engine::PolicyEngine::from_directory(dir);
                 let rule_count = engine.map(|e| e.rule_count()).unwrap_or(0);
                 checks.push(Check::pass(
                     "policies",
@@ -87,7 +87,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
                 checks.push(Check::fail(
                     "policies",
                     &format!("{} error(s) in policy files", result.errors.len()),
-                    Some("Run: bulwark policy validate"),
+                    Some("Run: forculus policy validate"),
                 ));
             }
         } else {
@@ -101,7 +101,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
 
     // 3. Vault key exists.
     if let Some(ref config) = config {
-        let key_path = bulwark_config::expand_tilde(&config.vault.key_path);
+        let key_path = forculus_config::expand_tilde(&config.vault.key_path);
         let key_file = Path::new(&key_path);
         if key_file.exists() {
             #[cfg(unix)]
@@ -134,14 +134,14 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
             checks.push(Check::fail(
                 "vault_key",
                 &format!("Vault key not found: {key_path}"),
-                Some("Run: bulwark init"),
+                Some("Run: forculus init"),
             ));
         }
     }
 
     // 4. CA certificate exists.
     if let Some(ref config) = config {
-        let ca_dir = bulwark_config::expand_tilde(&config.proxy.tls.ca_dir);
+        let ca_dir = forculus_config::expand_tilde(&config.proxy.tls.ca_dir);
         let ca_cert = Path::new(&ca_dir).join("ca.pem");
         if ca_cert.exists() {
             checks.push(Check::pass("ca_certificate", "CA certificate exists"));
@@ -149,14 +149,14 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
             checks.push(Check::fail(
                 "ca_certificate",
                 &format!("CA certificate not found: {}", ca_cert.display()),
-                Some("Start proxy once to auto-generate, or run: bulwark ca export"),
+                Some("Start proxy once to auto-generate, or run: forculus ca export"),
             ));
         }
     }
 
     // 5. Credentials directory accessible.
     if let Some(ref config) = config {
-        let creds_dir = bulwark_config::expand_tilde(&config.vault.credentials_dir);
+        let creds_dir = forculus_config::expand_tilde(&config.vault.credentials_dir);
         let dir = Path::new(&creds_dir);
         if dir.exists() {
             let count = std::fs::read_dir(dir)
@@ -183,7 +183,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
     // 6. SQLite databases writable.
     if let Some(ref config) = config {
         // Sessions DB.
-        let sessions_db = bulwark_config::expand_tilde(&config.vault.sessions_db_path);
+        let sessions_db = forculus_config::expand_tilde(&config.vault.sessions_db_path);
         match check_db_writable(&sessions_db) {
             Ok(()) => checks.push(Check::pass("sessions_db", "Sessions database writable")),
             Err(e) => checks.push(Check::fail(
@@ -194,7 +194,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
         }
 
         // Audit DB.
-        let audit_db = bulwark_config::expand_tilde(&config.audit.db_path);
+        let audit_db = forculus_config::expand_tilde(&config.audit.db_path);
         match check_db_writable(&audit_db) {
             Ok(()) => checks.push(Check::pass("audit_db", "Audit database writable")),
             Err(e) => checks.push(Check::fail(
@@ -219,7 +219,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
                 checks.push(Check::fail(
                     "proxy_port",
                     &format!("Proxy port {addr} is in use"),
-                    Some("Change listen_address in bulwark.yaml or stop the process using it"),
+                    Some("Change listen_address in forculus.yaml or stop the process using it"),
                 ));
             }
         }
@@ -227,10 +227,10 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
 
     // 8. Audit hash chain integrity.
     if let Some(ref config) = config {
-        let audit_db = bulwark_config::expand_tilde(&config.audit.db_path);
+        let audit_db = forculus_config::expand_tilde(&config.audit.db_path);
         let audit_path = Path::new(&audit_db);
         if audit_path.exists() {
-            match bulwark_audit::store::AuditStore::open(audit_path) {
+            match forculus_audit::store::AuditStore::open(audit_path) {
                 Ok(store) => match store.verify_chain() {
                     Ok(verification) => {
                         if verification.valid {
@@ -248,7 +248,7 @@ fn collect_checks(config_path: &Path) -> Vec<Check> {
                                     "Audit hash chain INVALID at event {}",
                                     verification.first_invalid_index.unwrap_or(0)
                                 ),
-                                Some("Investigate tampered events with: bulwark audit verify"),
+                                Some("Investigate tampered events with: forculus audit verify"),
                             ));
                         }
                     }
@@ -294,7 +294,7 @@ pub fn run(config_path: &Path, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("Bulwark Doctor");
+    println!("Forculus Doctor");
     println!("{}\n", "=".repeat(40));
 
     for check in &checks {
@@ -330,7 +330,7 @@ fn check_db_writable(path: &str) -> Result<()> {
         }
     }
     // Try opening — this creates if missing and verifies write access.
-    bulwark_audit::store::AuditStore::open(p).context("opening database")?;
+    forculus_audit::store::AuditStore::open(p).context("opening database")?;
     Ok(())
 }
 
@@ -368,7 +368,7 @@ audit:
             sessions_db = dir.join("sessions.db").display(),
             audit_db = dir.join("audit.db").display(),
         );
-        let config_path = dir.join("bulwark.yaml");
+        let config_path = dir.join("forculus.yaml");
         std::fs::write(&config_path, config).unwrap();
         config_path
     }
@@ -391,7 +391,7 @@ audit:
                 .remediation
                 .as_ref()
                 .unwrap()
-                .contains("bulwark init")
+                .contains("forculus init")
         );
         // Only the config check should be present (subsequent checks need config).
         assert_eq!(checks.len(), 1);

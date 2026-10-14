@@ -6,13 +6,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use bulwark_mcp::gateway::McpGateway;
-use bulwark_mcp::transport::stdio::StdioTransport;
-use bulwark_mcp::types::{
+use forculus_mcp::gateway::McpGateway;
+use forculus_mcp::transport::stdio::StdioTransport;
+use forculus_mcp::types::{
     CONTENT_BLOCKED, JsonRpcMessage, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse,
     POLICY_DENIED, RATE_LIMITED, RequestId, Tool, ToolCallParams,
 };
-use bulwark_policy::engine::PolicyEngine;
+use forculus_policy::engine::PolicyEngine;
 use tokio::io::{DuplexStream, duplex};
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ async fn full_handshake() {
         assert!(resp.error.is_none());
         let result = resp.result.unwrap();
         assert_eq!(result["protocolVersion"], "2024-11-05");
-        assert_eq!(result["serverInfo"]["name"], "bulwark");
+        assert_eq!(result["serverInfo"]["name"], "forculus");
         assert!(result["capabilities"]["tools"].is_object());
     } else {
         panic!("Expected response");
@@ -143,10 +143,10 @@ async fn tools_list_with_namespacing() {
     // Do the client handshake + tool discovery.
     let mut client = client_transport;
     let mut rid: i64 = 1;
-    bulwark_mcp::client::initialize(&mut client, &mut rid)
+    forculus_mcp::client::initialize(&mut client, &mut rid)
         .await
         .unwrap();
-    let discovered = bulwark_mcp::client::list_tools(&mut client, &mut rid)
+    let discovered = forculus_mcp::client::list_tools(&mut client, &mut rid)
         .await
         .unwrap();
     assert_eq!(discovered.len(), 2);
@@ -164,16 +164,16 @@ async fn tool_call_forwarding_via_client() {
 
     let mut client = client_transport;
     let mut rid: i64 = 1;
-    bulwark_mcp::client::initialize(&mut client, &mut rid)
+    forculus_mcp::client::initialize(&mut client, &mut rid)
         .await
         .unwrap();
 
-    let result = bulwark_mcp::client::call_tool(&mut client, &mut rid, "greet", None)
+    let result = forculus_mcp::client::call_tool(&mut client, &mut rid, "greet", None)
         .await
         .unwrap();
     assert_eq!(result.content.len(), 1);
     match &result.content[0] {
-        bulwark_mcp::types::ToolContent::Text { text } => {
+        forculus_mcp::types::ToolContent::Text { text } => {
             assert_eq!(text, "Called: greet");
         }
         _ => panic!("Expected text content"),
@@ -191,8 +191,8 @@ async fn gateway_merged_tools_namespaces_correctly() {
     let tools = gateway.merged_tools().await;
     assert_eq!(tools.len(), 7, "expected 7 builtin tools");
     assert!(
-        tools.iter().all(|t| t.name.starts_with("bulwark__")),
-        "all builtin tools should be prefixed with bulwark__"
+        tools.iter().all(|t| t.name.starts_with("forculus__")),
+        "all builtin tools should be prefixed with forculus__"
     );
 
     // Test that tools/list returns the builtin tools via handle_message.
@@ -273,7 +273,7 @@ async fn unknown_method_returns_error() {
     let resp = gateway.handle_message(req).await.unwrap();
     if let JsonRpcMessage::Response(r) = resp {
         assert!(r.error.is_some());
-        assert_eq!(r.error.unwrap().code, bulwark_mcp::types::METHOD_NOT_FOUND);
+        assert_eq!(r.error.unwrap().code, forculus_mcp::types::METHOD_NOT_FOUND);
     } else {
         panic!("Expected response");
     }
@@ -302,7 +302,7 @@ async fn ping_returns_success() {
 #[tokio::test]
 async fn error_propagation_from_upstream() {
     // Test that when upstream returns an error for tools/call, the client
-    // propagates it as a BulwarkError.
+    // propagates it as a ForculusError.
     let (client_transport, server_transport) = create_transport_pair();
     let tools = vec![sample_tool("fail_tool", "Always fails")];
     tokio::spawn(async move {
@@ -311,11 +311,11 @@ async fn error_propagation_from_upstream() {
 
     let mut client = client_transport;
     let mut rid: i64 = 1;
-    bulwark_mcp::client::initialize(&mut client, &mut rid)
+    forculus_mcp::client::initialize(&mut client, &mut rid)
         .await
         .unwrap();
 
-    let err = bulwark_mcp::client::call_tool(&mut client, &mut rid, "fail_tool", None)
+    let err = forculus_mcp::client::call_tool(&mut client, &mut rid, "fail_tool", None)
         .await
         .unwrap_err();
     assert!(err.to_string().contains("mock tool error"));
@@ -344,17 +344,17 @@ async fn multiple_upstream_tool_discovery() {
     let mut rid1: i64 = 1;
     let mut rid2: i64 = 1;
 
-    bulwark_mcp::client::initialize(&mut c1, &mut rid1)
+    forculus_mcp::client::initialize(&mut c1, &mut rid1)
         .await
         .unwrap();
-    bulwark_mcp::client::initialize(&mut c2, &mut rid2)
+    forculus_mcp::client::initialize(&mut c2, &mut rid2)
         .await
         .unwrap();
 
-    let discovered1 = bulwark_mcp::client::list_tools(&mut c1, &mut rid1)
+    let discovered1 = forculus_mcp::client::list_tools(&mut c1, &mut rid1)
         .await
         .unwrap();
-    let discovered2 = bulwark_mcp::client::list_tools(&mut c2, &mut rid2)
+    let discovered2 = forculus_mcp::client::list_tools(&mut c2, &mut rid2)
         .await
         .unwrap();
 
@@ -563,10 +563,10 @@ async fn mcp_tool_call_produces_audit_event() {
     std::fs::write(&script_path, MOCK_MCP_SERVER_SCRIPT).unwrap();
 
     let audit_db = dir.path().join("audit.db");
-    let logger = bulwark_audit::logger::AuditLogger::new(&audit_db).unwrap();
+    let logger = forculus_audit::logger::AuditLogger::new(&audit_db).unwrap();
 
-    let config = bulwark_config::McpGatewayConfig {
-        upstream_servers: vec![bulwark_config::UpstreamServerConfig {
+    let config = forculus_config::McpGatewayConfig {
+        upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "mock".into(),
             command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
@@ -610,19 +610,19 @@ rules:
     logger.shutdown().await;
 
     // Query the audit store and verify the event.
-    let store = bulwark_audit::store::AuditStore::open(&audit_db).unwrap();
+    let store = forculus_audit::store::AuditStore::open(&audit_db).unwrap();
     let events = store
-        .query(&bulwark_audit::query::AuditFilter::default())
+        .query(&forculus_audit::query::AuditFilter::default())
         .unwrap();
 
     assert!(!events.is_empty(), "should have at least one audit event");
     let event = &events[0];
     assert_eq!(
         event.event_type,
-        bulwark_audit::event::EventType::RequestProcessed
+        forculus_audit::event::EventType::RequestProcessed
     );
-    assert_eq!(event.outcome, bulwark_audit::event::EventOutcome::Success);
-    assert_eq!(event.channel, bulwark_audit::event::Channel::McpGateway);
+    assert_eq!(event.outcome, forculus_audit::event::EventOutcome::Success);
+    assert_eq!(event.channel, forculus_audit::event::Channel::McpGateway);
 
     gateway.shutdown().await;
 }
@@ -631,7 +631,7 @@ rules:
 async fn mcp_denied_tool_call_produces_denied_audit_event() {
     let dir = tempfile::tempdir().unwrap();
     let audit_db = dir.path().join("audit.db");
-    let logger = bulwark_audit::logger::AuditLogger::new(&audit_db).unwrap();
+    let logger = forculus_audit::logger::AuditLogger::new(&audit_db).unwrap();
 
     let engine = engine_with_rules(
         r#"
@@ -661,19 +661,19 @@ rules:
     logger.shutdown().await;
 
     // Query the audit store and verify the denial event.
-    let store = bulwark_audit::store::AuditStore::open(&audit_db).unwrap();
+    let store = forculus_audit::store::AuditStore::open(&audit_db).unwrap();
     let events = store
-        .query(&bulwark_audit::query::AuditFilter::default())
+        .query(&forculus_audit::query::AuditFilter::default())
         .unwrap();
 
     assert!(!events.is_empty(), "should have at least one audit event");
     let event = &events[0];
     assert_eq!(
         event.event_type,
-        bulwark_audit::event::EventType::PolicyDecision
+        forculus_audit::event::EventType::PolicyDecision
     );
-    assert_eq!(event.outcome, bulwark_audit::event::EventOutcome::Denied);
-    assert_eq!(event.channel, bulwark_audit::event::Channel::McpGateway);
+    assert_eq!(event.outcome, forculus_audit::event::EventOutcome::Denied);
+    assert_eq!(event.channel, forculus_audit::event::Channel::McpGateway);
 
     // Verify policy information is included.
     assert!(event.policy.is_some(), "policy info should be populated");
@@ -697,10 +697,10 @@ rules:
 "#,
     );
 
-    let ctx = bulwark_policy::context::RequestContext::new("fs", "read_file");
+    let ctx = forculus_policy::context::RequestContext::new("fs", "read_file");
     let eval = engine.evaluate(&ctx);
 
-    let meta = bulwark_mcp::governance::governance_metadata(&eval);
+    let meta = forculus_mcp::governance::governance_metadata(&eval);
 
     assert_eq!(meta["governance"]["verdict"], "allow");
     assert_eq!(meta["governance"]["matched_rule"], "allow-reads");
@@ -725,7 +725,7 @@ rules:
 "#,
     );
 
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
     let gateway = McpGateway::new_with_upstreams(HashMap::new())
         .with_policy_engine(engine)
@@ -817,10 +817,10 @@ rules:
 "#,
     );
 
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
-    let config = bulwark_config::McpGatewayConfig {
-        upstream_servers: vec![bulwark_config::UpstreamServerConfig {
+    let config = forculus_config::McpGatewayConfig {
+        upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "leaky".into(),
             command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
@@ -950,10 +950,10 @@ rules:
 "#,
     );
 
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
-    let config = bulwark_config::McpGatewayConfig {
-        upstream_servers: vec![bulwark_config::UpstreamServerConfig {
+    let config = forculus_config::McpGatewayConfig {
+        upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "bearer".into(),
             command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
@@ -1040,10 +1040,10 @@ rules:
 "#,
     );
 
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
 
-    let config = bulwark_config::McpGatewayConfig {
-        upstream_servers: vec![bulwark_config::UpstreamServerConfig {
+    let config = forculus_config::McpGatewayConfig {
+        upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "echo".into(),
             command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
@@ -1100,7 +1100,7 @@ rules:
 
 #[tokio::test]
 async fn mcp_rate_limit_denies_excess() {
-    use bulwark_ratelimit::limiter::RateLimiter;
+    use forculus_ratelimit::limiter::RateLimiter;
 
     // Allow all via policy.
     let engine = engine_with_rules(
@@ -1115,7 +1115,7 @@ rules:
 
     // Rate limit: burst=2, 60 RPM, global dimension.
     let limiter = Arc::new(
-        RateLimiter::new(vec![bulwark_config::RateLimitRule {
+        RateLimiter::new(vec![forculus_config::RateLimitRule {
             name: "test-limit".to_string(),
             tools: vec!["*".to_string()],
             rpm: 60,
@@ -1172,7 +1172,7 @@ rules:
 
 #[tokio::test]
 async fn builtin_scan_content_via_gateway() {
-    let scanner = Arc::new(bulwark_inspect::scanner::ContentScanner::builtin());
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
     let gateway = McpGateway::new_with_upstreams(HashMap::new()).with_content_scanner(scanner);
 
     let req = JsonRpcMessage::Request(JsonRpcRequest {
@@ -1180,7 +1180,7 @@ async fn builtin_scan_content_via_gateway() {
         id: RequestId::Number(1),
         method: "tools/call".into(),
         params: Some(serde_json::json!({
-            "name": "bulwark__scan_content",
+            "name": "forculus__scan_content",
             "arguments": {"text": "AKIAIOSFODNN7EXAMPLE"}
         })),
     });
@@ -1208,7 +1208,7 @@ async fn builtin_scan_content_via_gateway() {
 #[tokio::test]
 async fn builtin_audit_verify_via_gateway() {
     let dir = tempfile::tempdir().unwrap();
-    let store = bulwark_audit::store::AuditStore::open(&dir.path().join("audit.db")).unwrap();
+    let store = forculus_audit::store::AuditStore::open(&dir.path().join("audit.db")).unwrap();
     let store = Arc::new(parking_lot::Mutex::new(store));
 
     let gateway = McpGateway::new_with_upstreams(HashMap::new()).with_audit_store(store);
@@ -1218,7 +1218,7 @@ async fn builtin_audit_verify_via_gateway() {
         id: RequestId::Number(1),
         method: "tools/call".into(),
         params: Some(serde_json::json!({
-            "name": "bulwark__audit_verify",
+            "name": "forculus__audit_verify",
             "arguments": {}
         })),
     });
@@ -1260,7 +1260,7 @@ rules:
         id: RequestId::Number(1),
         method: "tools/call".into(),
         params: Some(serde_json::json!({
-            "name": "bulwark__policy_evaluate",
+            "name": "forculus__policy_evaluate",
             "arguments": {"tool": "github", "action": "read_file"}
         })),
     });
@@ -1291,7 +1291,7 @@ async fn builtin_unknown_tool_returns_error() {
         id: RequestId::Number(1),
         method: "tools/call".into(),
         params: Some(serde_json::json!({
-            "name": "bulwark__nonexistent_tool",
+            "name": "forculus__nonexistent_tool",
             "arguments": {}
         })),
     });
@@ -1410,7 +1410,7 @@ async fn start_test_http_server(
     let shutdown_clone = shutdown.clone();
 
     tokio::spawn(async move {
-        bulwark_mcp::server::run_http_server_with_listener(
+        forculus_mcp::server::run_http_server_with_listener(
             gateway,
             listener,
             allowed_origins,
@@ -1462,7 +1462,7 @@ async fn http_post_initialize_returns_session_id() {
 
     let body: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(body["result"]["protocolVersion"], "2024-11-05");
-    assert_eq!(body["result"]["serverInfo"]["name"], "bulwark");
+    assert_eq!(body["result"]["serverInfo"]["name"], "forculus");
 
     shutdown.cancel();
 }

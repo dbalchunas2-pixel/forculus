@@ -1,6 +1,6 @@
 //! OAuth 2.1 flows — authorization code + PKCE, code exchange, service token validation.
 
-use bulwark_common::BulwarkError;
+use forculus_common::ForculusError;
 use openidconnect::{
     AccessToken, AuthorizationCode, CsrfToken, EmptyAdditionalClaims, Nonce, PkceCodeChallenge,
     PkceCodeVerifier, Scope, TokenResponse, UserInfoClaims,
@@ -58,22 +58,22 @@ impl AuthProvider {
         code: &str,
         pkce_verifier: PkceCodeVerifier,
         nonce: &Nonce,
-    ) -> Result<MappedClaims, BulwarkError> {
+    ) -> Result<MappedClaims, ForculusError> {
         // 1. Exchange authorization code for token response
         let token_response = self
             .client
             .exchange_code(AuthorizationCode::new(code.to_string()))
             .map_err(|e| {
-                BulwarkError::OidcTokenExchange(format!("token endpoint not configured: {e}"))
+                ForculusError::OidcTokenExchange(format!("token endpoint not configured: {e}"))
             })?
             .set_pkce_verifier(pkce_verifier)
             .request_async(&self.http_client)
             .await
-            .map_err(|e| BulwarkError::OidcTokenExchange(format!("code exchange failed: {e}")))?;
+            .map_err(|e| ForculusError::OidcTokenExchange(format!("code exchange failed: {e}")))?;
 
         // 2. Extract and verify ID token
         let id_token = token_response.id_token().ok_or_else(|| {
-            BulwarkError::OidcTokenValidation(
+            ForculusError::OidcTokenValidation(
                 "token response did not contain an ID token".to_string(),
             )
         })?;
@@ -83,7 +83,7 @@ impl AuthProvider {
 
         let verifier = self.client.id_token_verifier();
         let claims = id_token.claims(&verifier, nonce).map_err(|e| {
-            BulwarkError::OidcTokenValidation(format!("ID token validation failed: {e}"))
+            ForculusError::OidcTokenValidation(format!("ID token validation failed: {e}"))
         })?;
 
         // 3. Extract standard claims
@@ -115,9 +115,9 @@ impl AuthProvider {
     ///
     /// The caller has already obtained a token via client_credentials flow with the IdP.
     /// This method validates the token via the IdP's userinfo endpoint and extracts claims.
-    pub async fn validate_service_token(&self, token: &str) -> Result<MappedClaims, BulwarkError> {
+    pub async fn validate_service_token(&self, token: &str) -> Result<MappedClaims, ForculusError> {
         if !self.service_accounts_enabled {
-            return Err(BulwarkError::OidcConfiguration(
+            return Err(ForculusError::OidcConfiguration(
                 "service account authentication is not enabled".to_string(),
             ));
         }
@@ -130,12 +130,12 @@ impl AuthProvider {
             .client
             .user_info(AccessToken::new(token.to_string()), None)
             .map_err(|e| {
-                BulwarkError::OidcTokenValidation(format!("userinfo endpoint not configured: {e}"))
+                ForculusError::OidcTokenValidation(format!("userinfo endpoint not configured: {e}"))
             })?
             .request_async(&self.http_client)
             .await
             .map_err(|e| {
-                BulwarkError::OidcTokenValidation(format!(
+                ForculusError::OidcTokenValidation(format!(
                     "userinfo request failed (token may be invalid): {e}"
                 ))
             })?;

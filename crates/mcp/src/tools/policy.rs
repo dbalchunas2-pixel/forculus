@@ -1,6 +1,6 @@
-//! `bulwark__policy_evaluate` — evaluate policy rules for a given request context.
+//! `forculus__policy_evaluate` — evaluate policy rules for a given request context.
 
-use bulwark_policy::context::RequestContext;
+use forculus_policy::context::RequestContext;
 
 use crate::types::{Tool, ToolCallResult};
 
@@ -8,7 +8,7 @@ use super::{BuiltinContext, error_result, json_result};
 
 pub fn tool_definition() -> Tool {
     Tool {
-        name: "bulwark__policy_evaluate".to_string(),
+        name: "forculus__policy_evaluate".to_string(),
         description: Some("Evaluate policy rules for a given tool and action".to_string()),
         input_schema: serde_json::json!({
             "type": "object",

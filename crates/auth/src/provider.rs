@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use bulwark_common::BulwarkError;
+use forculus_common::ForculusError;
 use openidconnect::core::CoreProviderMetadata;
 use openidconnect::{ClientId, ClientSecret, IssuerUrl, RedirectUrl};
 use secrecy::{ExposeSecret, SecretString};
@@ -32,7 +32,7 @@ pub enum ClientSecretSource {
     Env(String),
     /// Read from a file at the given path.
     File(String),
-    /// Read from Bulwark's credential vault (not yet implemented).
+    /// Read from Forculus's credential vault (not yet implemented).
     Vault,
 }
 
@@ -51,7 +51,7 @@ pub struct AuthProviderConfig {
     pub scopes: Vec<String>,
     /// Claim name containing group memberships (e.g. `"groups"`).
     pub group_claim: String,
-    /// Maps IdP group names to Bulwark session fields.
+    /// Maps IdP group names to Forculus session fields.
     pub group_mapping: HashMap<String, GroupMappingEntry>,
     /// Default session TTL.
     pub default_session_ttl: Duration,
@@ -63,7 +63,7 @@ pub struct AuthProviderConfig {
 ///
 /// Handles OIDC discovery, authorization URL generation, code exchange,
 /// and service token validation. Produces [`MappedClaims`](crate::MappedClaims)
-/// that the caller uses to create Bulwark sessions.
+/// that the caller uses to create Forculus sessions.
 ///
 /// Uses `CoreClient` from the `openidconnect` crate for standard OIDC
 /// operations. Custom claims (like group memberships) are extracted from
@@ -92,7 +92,7 @@ impl AuthProvider {
     /// from the issuer URL and sets up the OIDC client.
     ///
     /// This is async because it makes HTTP requests to the discovery and JWKS endpoints.
-    pub async fn from_discovery(config: &AuthProviderConfig) -> Result<Self, BulwarkError> {
+    pub async fn from_discovery(config: &AuthProviderConfig) -> Result<Self, ForculusError> {
         // 1. Resolve client secret
         let client_secret = resolve_secret(&config.client_secret_source)?;
 
@@ -101,12 +101,12 @@ impl AuthProvider {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| {
-                BulwarkError::OidcDiscovery(format!("failed to build HTTP client: {e}"))
+                ForculusError::OidcDiscovery(format!("failed to build HTTP client: {e}"))
             })?;
 
         // 3. Fetch provider metadata from .well-known/openid-configuration
         let issuer_url = IssuerUrl::new(config.issuer_url.clone()).map_err(|e| {
-            BulwarkError::OidcConfiguration(format!(
+            ForculusError::OidcConfiguration(format!(
                 "invalid issuer URL '{}': {e}",
                 config.issuer_url
             ))
@@ -115,7 +115,7 @@ impl AuthProvider {
         let provider_metadata = CoreProviderMetadata::discover_async(issuer_url, &http_client)
             .await
             .map_err(|e| {
-                BulwarkError::OidcDiscovery(format!(
+                ForculusError::OidcDiscovery(format!(
                     "could not reach {}/.well-known/openid-configuration: {e}",
                     config.issuer_url
                 ))
@@ -132,7 +132,7 @@ impl AuthProvider {
         if let Some(redirect_uri) = &config.redirect_uri {
             client =
                 client.set_redirect_uri(RedirectUrl::new(redirect_uri.clone()).map_err(|e| {
-                    BulwarkError::OidcConfiguration(format!(
+                    ForculusError::OidcConfiguration(format!(
                         "invalid redirect URI '{redirect_uri}': {e}"
                     ))
                 })?);
@@ -153,11 +153,11 @@ impl AuthProvider {
 }
 
 /// Resolve a client secret from the configured source.
-fn resolve_secret(source: &ClientSecretSource) -> Result<SecretString, BulwarkError> {
+fn resolve_secret(source: &ClientSecretSource) -> Result<SecretString, ForculusError> {
     match source {
         ClientSecretSource::Env(var_name) => {
             let value = std::env::var(var_name).map_err(|_| {
-                BulwarkError::OidcConfiguration(format!(
+                ForculusError::OidcConfiguration(format!(
                     "environment variable '{var_name}' not set for client secret"
                 ))
             })?;
@@ -165,13 +165,13 @@ fn resolve_secret(source: &ClientSecretSource) -> Result<SecretString, BulwarkEr
         }
         ClientSecretSource::File(path) => {
             let value = std::fs::read_to_string(path).map_err(|e| {
-                BulwarkError::OidcConfiguration(format!(
+                ForculusError::OidcConfiguration(format!(
                     "failed to read client secret from file '{path}': {e}"
                 ))
             })?;
             Ok(SecretString::from(value.trim().to_string()))
         }
-        ClientSecretSource::Vault => Err(BulwarkError::OidcConfiguration(
+        ClientSecretSource::Vault => Err(ForculusError::OidcConfiguration(
             "client_secret_source: vault is not yet implemented".to_string(),
         )),
     }
@@ -255,11 +255,11 @@ mod tests {
     #[test]
     fn resolve_secret_from_env_missing() {
         // Use a var name that is very unlikely to exist
-        let source = ClientSecretSource::Env("BULWARK_TEST_NONEXISTENT_SECRET_XYZ_999".to_string());
+        let source = ClientSecretSource::Env("FORCULUS_TEST_NONEXISTENT_SECRET_XYZ_999".to_string());
         let err = resolve_secret(&source).unwrap_err();
         assert!(
             err.to_string()
-                .contains("BULWARK_TEST_NONEXISTENT_SECRET_XYZ_999")
+                .contains("FORCULUS_TEST_NONEXISTENT_SECRET_XYZ_999")
         );
     }
 

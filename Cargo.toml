@@ -23,17 +23,17 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 # Internal crates
-bulwark-common = { path = "crates/common" }
-bulwark-config = { path = "crates/config" }
-bulwark-proxy = { path = "crates/proxy" }
-bulwark-mcp = { path = "crates/mcp" }
-bulwark-policy = { path = "crates/policy" }
-bulwark-vault = { path = "crates/vault" }
-bulwark-audit = { path = "crates/audit" }
-bulwark-inspect = { path = "crates/inspect" }
-bulwark-ratelimit = { path = "crates/ratelimit" }
-bulwark-inspect-http = { path = "crates/inspect-http" }
-bulwark-auth = { path = "crates/auth" }
+forculus-common = { path = "crates/common" }
+forculus-config = { path = "crates/config" }
+forculus-proxy = { path = "crates/proxy" }
+forculus-mcp = { path = "crates/mcp" }
+forculus-policy = { path = "crates/policy" }
+forculus-vault = { path = "crates/vault" }
+forculus-audit = { path = "crates/audit" }
+forculus-inspect = { path = "crates/inspect" }
+forculus-ratelimit = { path = "crates/ratelimit" }
+forculus-inspect-http = { path = "crates/inspect-http" }
+forculus-auth = { path = "crates/auth" }
 
 # Benchmarks
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }

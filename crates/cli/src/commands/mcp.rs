@@ -1,15 +1,15 @@
-//! `bulwark mcp start` — run the MCP governance gateway over stdio.
+//! `forculus mcp start` — run the MCP governance gateway over stdio.
 
 use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use bulwark_audit::logger::AuditLogger;
-use bulwark_config::{LogFormat, load_config};
-use bulwark_mcp::gateway::McpGateway;
-use bulwark_mcp::server::run_stdio_server;
-use bulwark_policy::engine::PolicyEngine;
-use bulwark_vault::store::Vault;
+use forculus_audit::logger::AuditLogger;
+use forculus_config::{LogFormat, load_config};
+use forculus_mcp::gateway::McpGateway;
+use forculus_mcp::server::run_stdio_server;
+use forculus_policy::engine::PolicyEngine;
+use forculus_vault::store::Vault;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
@@ -85,7 +85,7 @@ pub fn start(config_path: &Path, log_level: Option<&str>) -> Result<()> {
         }
 
         // Load the vault if the key exists.
-        let key_path = bulwark_config::expand_tilde(&vault_config.key_path);
+        let key_path = forculus_config::expand_tilde(&vault_config.key_path);
         if Path::new(&key_path).exists() {
             match Vault::open(&vault_config) {
                 Ok(vault) => {
@@ -100,16 +100,16 @@ pub fn start(config_path: &Path, log_level: Option<&str>) -> Result<()> {
 
         // Start audit logger and store if enabled.
         let _audit_logger = if audit_config.enabled {
-            let audit_db_path = bulwark_config::expand_tilde(&audit_config.db_path);
+            let audit_db_path = forculus_config::expand_tilde(&audit_config.db_path);
             match AuditLogger::new(Path::new(&audit_db_path)) {
                 Ok(logger) => {
                     tracing::info!(db = %audit_db_path, "audit logger started");
 
                     // Run retention cleanup on startup.
                     if audit_config.retention_days > 0 {
-                        match bulwark_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
+                        match forculus_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
                             Ok(retention_store) => {
-                                match bulwark_audit::retention::run_retention(
+                                match forculus_audit::retention::run_retention(
                                     &retention_store,
                                     audit_config.retention_days,
                                 ) {
@@ -133,7 +133,7 @@ pub fn start(config_path: &Path, log_level: Option<&str>) -> Result<()> {
                     }
 
                     // Open a separate audit store connection for builtin query tools.
-                    match bulwark_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
+                    match forculus_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
                         Ok(query_store) => {
                             gateway = gateway.with_audit_store(Arc::new(
                                 parking_lot::Mutex::new(query_store),
@@ -158,7 +158,7 @@ pub fn start(config_path: &Path, log_level: Option<&str>) -> Result<()> {
 
         // Load content scanner if inspection is enabled.
         if inspect_config.enabled {
-            match bulwark_inspect::scanner::ContentScanner::from_config(&inspect_config) {
+            match forculus_inspect::scanner::ContentScanner::from_config(&inspect_config) {
                 Ok(scanner) => {
                     tracing::info!(
                         rules = scanner.rule_set().enabled_count(),
@@ -269,7 +269,7 @@ pub fn serve(
         }
 
         // Load the vault if the key exists.
-        let key_path = bulwark_config::expand_tilde(&vault_config.key_path);
+        let key_path = forculus_config::expand_tilde(&vault_config.key_path);
         if Path::new(&key_path).exists() {
             match Vault::open(&vault_config) {
                 Ok(vault) => {
@@ -284,16 +284,16 @@ pub fn serve(
 
         // Start audit logger and store if enabled.
         let _audit_logger = if audit_config.enabled {
-            let audit_db_path = bulwark_config::expand_tilde(&audit_config.db_path);
+            let audit_db_path = forculus_config::expand_tilde(&audit_config.db_path);
             match AuditLogger::new(Path::new(&audit_db_path)) {
                 Ok(logger) => {
                     tracing::info!(db = %audit_db_path, "audit logger started");
 
                     // Run retention cleanup on startup.
                     if audit_config.retention_days > 0 {
-                        match bulwark_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
+                        match forculus_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
                             Ok(retention_store) => {
-                                match bulwark_audit::retention::run_retention(
+                                match forculus_audit::retention::run_retention(
                                     &retention_store,
                                     audit_config.retention_days,
                                 ) {
@@ -317,7 +317,7 @@ pub fn serve(
                     }
 
                     // Open a separate audit store connection for builtin query tools.
-                    match bulwark_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
+                    match forculus_audit::store::AuditStore::open(Path::new(&audit_db_path)) {
                         Ok(query_store) => {
                             gateway = gateway.with_audit_store(Arc::new(
                                 parking_lot::Mutex::new(query_store),
@@ -342,7 +342,7 @@ pub fn serve(
 
         // Load content scanner if inspection is enabled.
         if inspect_config.enabled {
-            match bulwark_inspect::scanner::ContentScanner::from_config(&inspect_config) {
+            match forculus_inspect::scanner::ContentScanner::from_config(&inspect_config) {
                 Ok(scanner) => {
                     tracing::info!(
                         rules = scanner.rule_set().enabled_count(),
@@ -369,7 +369,7 @@ pub fn serve(
             shutdown_clone.cancel();
         });
 
-        bulwark_mcp::server::run_http_server(gateway, &listen_address, allowed_origins, shutdown)
+        forculus_mcp::server::run_http_server(gateway, &listen_address, allowed_origins, shutdown)
             .await
             .context("running MCP HTTP server")?;
 

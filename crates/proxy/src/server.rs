@@ -10,15 +10,15 @@ use hyper_util::server::conn::auto::Builder;
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 
-use bulwark_audit::logger::AuditLogger;
-use bulwark_config::ProxyConfig;
-use bulwark_inspect::scanner::ContentScanner;
-use bulwark_inspect_http::HttpAnalyzerPipeline;
-use bulwark_policy::engine::PolicyEngine;
-use bulwark_policy::glob::GlobPattern;
-use bulwark_ratelimit::cost::CostTracker;
-use bulwark_ratelimit::limiter::RateLimiter;
-use bulwark_vault::store::Vault;
+use forculus_audit::logger::AuditLogger;
+use forculus_config::ProxyConfig;
+use forculus_inspect::scanner::ContentScanner;
+use forculus_inspect_http::HttpAnalyzerPipeline;
+use forculus_policy::engine::PolicyEngine;
+use forculus_policy::glob::GlobPattern;
+use forculus_ratelimit::cost::CostTracker;
+use forculus_ratelimit::limiter::RateLimiter;
+use forculus_vault::store::Vault;
 
 use crate::toolmap::ToolMapper;
 
@@ -26,7 +26,7 @@ use crate::context::ProxyRequestContext;
 use crate::handler;
 use crate::tls::TlsState;
 
-/// The Bulwark forward proxy server.
+/// The Forculus forward proxy server.
 pub struct ProxyServer {
     config: ProxyConfig,
     tls_state: Arc<TlsState>,
@@ -40,7 +40,7 @@ impl ProxyServer {
     ///
     /// This initialises the TLS subsystem (loading or generating the CA) but
     /// does **not** start listening.
-    pub async fn new(config: ProxyConfig) -> bulwark_common::Result<Self> {
+    pub async fn new(config: ProxyConfig) -> forculus_common::Result<Self> {
         let tls_state = Arc::new(TlsState::new(&config.tls.ca_dir)?);
         Ok(Self {
             config,
@@ -119,11 +119,11 @@ impl ProxyServer {
     ///
     /// This method runs until [`ProxyServer::trigger_shutdown`] is called or a
     /// `SIGINT`/`SIGTERM` is received.
-    pub async fn run(&self) -> bulwark_common::Result<()> {
+    pub async fn run(&self) -> forculus_common::Result<()> {
         let listener = TcpListener::bind(&self.config.listen_address)
             .await
             .map_err(|e| {
-                bulwark_common::BulwarkError::Proxy(format!(
+                forculus_common::ForculusError::Proxy(format!(
                     "failed to bind {}: {e}",
                     self.config.listen_address
                 ))
@@ -132,29 +132,29 @@ impl ProxyServer {
         let local_addr = listener.local_addr()?;
         tracing::info!(
             address = %local_addr,
-            version = bulwark_common::VERSION,
-            "Bulwark proxy started"
+            version = forculus_common::VERSION,
+            "Forculus proxy started"
         );
 
         self.accept_loop(listener).await;
 
-        tracing::info!("Bulwark proxy shut down");
+        tracing::info!("Forculus proxy shut down");
         Ok(())
     }
 
     /// Like [`run`](Self::run) but binds to the given listener (useful for
     /// tests that pre-bind to port 0).
-    pub async fn run_with_listener(&self, listener: TcpListener) -> bulwark_common::Result<()> {
+    pub async fn run_with_listener(&self, listener: TcpListener) -> forculus_common::Result<()> {
         let local_addr = listener.local_addr()?;
         tracing::info!(
             address = %local_addr,
-            version = bulwark_common::VERSION,
-            "Bulwark proxy started"
+            version = forculus_common::VERSION,
+            "Forculus proxy started"
         );
 
         self.accept_loop(listener).await;
 
-        tracing::info!("Bulwark proxy shut down");
+        tracing::info!("Forculus proxy shut down");
         Ok(())
     }
 

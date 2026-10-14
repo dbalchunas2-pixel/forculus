@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Bulwark is a governance layer that sits between AI agents and their tools, enforcing policies, managing credentials, inspecting content, and maintaining an immutable audit trail. This document explains how Bulwark works under the hood.
+Forculus is a governance layer that sits between AI agents and their tools, enforcing policies, managing credentials, inspecting content, and maintaining an immutable audit trail. This document explains how Forculus works under the hood.
 
 ## The Governance Pipeline
 
@@ -14,11 +14,11 @@ Every request flows through a multi-stage pipeline. Each stage can allow, deny, 
        │
        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                     Bulwark Gateway                          │
+│                     Forculus Gateway                          │
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │ 1. Session Validation                                 │  │
-│  │    ├─ Verify X-Bulwark-Session header or init params │  │
+│  │    ├─ Verify X-Forculus-Session header or init params │  │
 │  │    ├─ Load operator identity from session store      │  │
 │  │    └─ Reject if invalid/revoked                      │  │
 │  └──────────────────────────────────────────────────────┘  │
@@ -106,15 +106,15 @@ Every request flows through a multi-stage pipeline. Each stage can allow, deny, 
 
 ## Integration Modes
 
-Bulwark supports two integration modes, depending on whether your agent uses MCP (JSON-RPC over stdio) or HTTP.
+Forculus supports two integration modes, depending on whether your agent uses MCP (JSON-RPC over stdio) or HTTP.
 
 ### Mode 1: MCP Gateway
 
-In MCP mode, Bulwark acts as a transparent gateway between an MCP client (the agent) and an MCP server (the real tool provider).
+In MCP mode, Forculus acts as a transparent gateway between an MCP client (the agent) and an MCP server (the real tool provider).
 
 ```
 ┌─────────────┐                  ┌──────────────┐                  ┌─────────────┐
-│ MCP Client  │                  │   Bulwark    │                  │ MCP Server  │
+│ MCP Client  │                  │   Forculus    │                  │ MCP Server  │
 │  (Agent)    │ <─── stdio ───> │  MCP Gateway │ <─── stdio ───> │   (Tools)   │
 └─────────────┘                  └──────────────┘                  └─────────────┘
    JSON-RPC                        Intercept &                       JSON-RPC
@@ -124,11 +124,11 @@ In MCP mode, Bulwark acts as a transparent gateway between an MCP client (the ag
 **How it works**:
 
 1. Agent sends JSON-RPC request via stdin (e.g., `tools/call` method)
-2. Bulwark parses the request and extracts the tool name from the method
+2. Forculus parses the request and extracts the tool name from the method
 3. Pipeline executes: session validation, policy check, content inspection, etc.
-4. If allowed, Bulwark forwards the request to the real MCP server via stdio
+4. If allowed, Forculus forwards the request to the real MCP server via stdio
 5. MCP server responds via stdout
-6. Bulwark logs the event and returns the response to the agent
+6. Forculus logs the event and returns the response to the agent
 
 **Session handling**:
 
@@ -140,11 +140,11 @@ In MCP mode, Bulwark acts as a transparent gateway between an MCP client (the ag
 
 ### Mode 2: HTTP Forward Proxy
 
-In HTTP proxy mode, Bulwark acts as a forward proxy that intercepts HTTP and HTTPS requests.
+In HTTP proxy mode, Forculus acts as a forward proxy that intercepts HTTP and HTTPS requests.
 
 ```
 ┌─────────────┐                  ┌──────────────┐                  ┌─────────────┐
-│   Agent     │                  │   Bulwark    │                  │  Upstream   │
+│   Agent     │                  │   Forculus    │                  │  Upstream   │
 │ (HTTP/S)    │ ───── HTTP ────> │  HTTP Proxy  │ ───── HTTP ────> │  API/Tool   │
 └─────────────┘                  └──────────────┘                  └─────────────┘
    HTTP: direct                   MITM with TLS                     HTTP/HTTPS
@@ -154,29 +154,29 @@ In HTTP proxy mode, Bulwark acts as a forward proxy that intercepts HTTP and HTT
 **How it works**:
 
 1. Agent configures HTTP proxy: `http://localhost:8080`
-2. For HTTP requests: Agent sends `GET/POST http://example.com` directly to Bulwark
-3. For HTTPS requests: Agent sends `CONNECT example.com:443`, Bulwark performs TLS MITM
-4. Bulwark extracts tool name from `X-Tool-Name` header
+2. For HTTP requests: Agent sends `GET/POST http://example.com` directly to Forculus
+3. For HTTPS requests: Agent sends `CONNECT example.com:443`, Forculus performs TLS MITM
+4. Forculus extracts tool name from `X-Tool-Name` header
 5. Pipeline executes (same as MCP mode)
-6. If allowed, Bulwark forwards request to upstream and returns response
+6. If allowed, Forculus forwards request to upstream and returns response
 
 **Session handling**:
 
-- Session token passed in every request: `X-Bulwark-Session: bwk_sess_...`
+- Session token passed in every request: `X-Forculus-Session: bwk_sess_...`
 - Validated against SQLite session store
 
 **TLS MITM**:
 
-- Bulwark generates a root CA on first run (`ca-cert.pem`, `ca-key.pem`)
+- Forculus generates a root CA on first run (`ca-cert.pem`, `ca-key.pem`)
 - Agent must trust this CA
-- For each HTTPS host, Bulwark signs ephemeral certificates on-the-fly
+- For each HTTPS host, Forculus signs ephemeral certificates on-the-fly
 - Uses `rustls` with `aws_lc_rs` backend (FIPS-compatible crypto)
 
 **Best for**: HTTP-based agents, curl scripts, Python requests, or custom agents
 
 ## Subsystem Overview
 
-Bulwark is a Rust workspace with 10 crates. Here's what each subsystem does.
+Forculus is a Rust workspace with 10 crates. Here's what each subsystem does.
 
 ### Policy Engine (`crates/policy`)
 
@@ -295,7 +295,7 @@ rate_limits:
 
 ## Trust Model
 
-Bulwark implements a zero-trust architecture where only the operator and configuration files are trusted.
+Forculus implements a zero-trust architecture where only the operator and configuration files are trusted.
 
 ### Trusted Components
 
@@ -331,7 +331,7 @@ Bulwark implements a zero-trust architecture where only the operator and configu
 
 ## Data Flow
 
-Understanding what data goes where is critical for operating Bulwark.
+Understanding what data goes where is critical for operating Forculus.
 
 ### Persistent Storage (Disk)
 
@@ -343,7 +343,7 @@ Understanding what data goes where is critical for operating Bulwark.
 | Credential bindings | `credentials/bindings.yaml` | YAML | No (tool mappings) |
 | Audit log | `audit.db` | SQLite | No (hashes only) |
 | Session store | `sessions.db` | SQLite | No (tokens are random) |
-| Configuration | `bulwark.yaml` | YAML | No (plaintext) |
+| Configuration | `forculus.yaml` | YAML | No (plaintext) |
 | CA certificate | `ca-cert.pem` | PEM | No (public cert) |
 | CA private key | `ca-key.pem` | PEM | No (private key) |
 
@@ -372,20 +372,20 @@ Understanding what data goes where is critical for operating Bulwark.
 
 | Direction | Protocol | Data |
 |-----------|----------|------|
-| Agent → Bulwark | HTTP/HTTPS or stdio (JSON-RPC) | Tool invocation requests, session token, tool name |
-| Bulwark → Upstream | HTTP/HTTPS or stdio (JSON-RPC) | Forwarded requests (with injected credentials) |
-| Upstream → Bulwark | HTTP/HTTPS or stdio (JSON-RPC) | Tool responses |
-| Bulwark → Agent | HTTP/HTTPS or stdio (JSON-RPC) | Tool responses (or 403/429 errors) |
+| Agent → Forculus | HTTP/HTTPS or stdio (JSON-RPC) | Tool invocation requests, session token, tool name |
+| Forculus → Upstream | HTTP/HTTPS or stdio (JSON-RPC) | Forwarded requests (with injected credentials) |
+| Upstream → Forculus | HTTP/HTTPS or stdio (JSON-RPC) | Tool responses |
+| Forculus → Agent | HTTP/HTTPS or stdio (JSON-RPC) | Tool responses (or 403/429 errors) |
 
 **TLS security**:
-- Agent → Bulwark: TLS terminated by Bulwark (MITM with self-signed CA)
-- Bulwark → Upstream: TLS re-established by Bulwark (validates upstream certs)
-- Bulwark never sees agent's TLS private keys (not a transparent proxy)
+- Agent → Forculus: TLS terminated by Forculus (MITM with self-signed CA)
+- Forculus → Upstream: TLS re-established by Forculus (validates upstream certs)
+- Forculus never sees agent's TLS private keys (not a transparent proxy)
 
 ### Data Lifecycle
 
-1. **Operator creates session**: `bulwark session create` → session token stored in `sessions.db`
-2. **Agent makes request**: Includes session token → Bulwark validates against `sessions.db`
+1. **Operator creates session**: `forculus session create` → session token stored in `sessions.db`
+2. **Agent makes request**: Includes session token → Forculus validates against `sessions.db`
 3. **Policy evaluated**: Policies loaded from `ArcSwap<PolicyEngine>` (in-memory, lock-free)
 4. **Credential injected**: Decrypted from `.age` file, injected into request
 5. **Request forwarded**: Sent to upstream tool via HTTP or stdio
@@ -424,12 +424,12 @@ inspect: Content inspection with 13 built-in rules
 ratelimit: Token-bucket rate limiting
 proxy: HTTP forward proxy with TLS MITM
 mcp: MCP gateway (stdio JSON-RPC)
-cli: Command-line interface (bulwark binary)
+cli: Command-line interface (forculus binary)
 ```
 
 ## Configuration Files
 
-### Main Config: `bulwark.yaml`
+### Main Config: `forculus.yaml`
 
 ```yaml
 # Server configuration
@@ -533,10 +533,10 @@ Planned improvements:
 
 ## Further Reading
 
-- [Getting Started Guide](getting-started.md) - Install and run Bulwark in 10 minutes
+- [Getting Started Guide](getting-started.md) - Install and run Forculus in 10 minutes
 - [Policy Reference](policy-reference.md) - Full policy schema and examples
 - [Credential Vault Guide](credential-vault.md) - Manage encrypted credentials
 - [Content Inspection Guide](content-inspection.md) - Configure secret/PII scanning
-- [MCP Gateway Guide](mcp-gateway.md) - Use Bulwark with MCP agents
-- [Deployment Guide](deployment.md) - Run Bulwark in production
-- [Contributing Guide](../CONTRIBUTING.md) - Contribute to Bulwark
+- [MCP Gateway Guide](mcp-gateway.md) - Use Forculus with MCP agents
+- [Deployment Guide](deployment.md) - Run Forculus in production
+- [Contributing Guide](../CONTRIBUTING.md) - Contribute to Forculus

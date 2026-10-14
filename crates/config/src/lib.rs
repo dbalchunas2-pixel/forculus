@@ -1,6 +1,6 @@
-//! Bulwark config — configuration loading and validation.
+//! Forculus config — configuration loading and validation.
 //!
-//! Loads [`BulwarkConfig`] from a YAML file, falling back to sensible defaults
+//! Loads [`ForculusConfig`] from a YAML file, falling back to sensible defaults
 //! when the file does not exist.
 #![forbid(unsafe_code)]
 
@@ -9,10 +9,10 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-/// Top-level Bulwark configuration.
+/// Top-level Forculus configuration.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default)]
-pub struct BulwarkConfig {
+pub struct ForculusConfig {
     /// Proxy server settings.
     pub proxy: ProxyConfig,
     /// Logging settings.
@@ -26,7 +26,7 @@ pub struct BulwarkConfig {
     /// Audit settings.
     pub audit: AuditConfig,
     /// Content inspection settings.
-    pub inspect: bulwark_inspect::config::InspectionConfig,
+    pub inspect: forculus_inspect::config::InspectionConfig,
     /// Rate limiting settings.
     pub rate_limit: RateLimitConfig,
     /// Cost estimation settings.
@@ -130,7 +130,7 @@ pub struct TlsConfig {
 impl Default for TlsConfig {
     fn default() -> Self {
         Self {
-            ca_dir: "~/.bulwark/ca".to_string(),
+            ca_dir: "~/.forculus/ca".to_string(),
         }
     }
 }
@@ -235,10 +235,10 @@ pub struct VaultConfig {
 impl Default for VaultConfig {
     fn default() -> Self {
         Self {
-            key_path: "~/.bulwark/vault-key.age".to_string(),
-            credentials_dir: "~/.bulwark/credentials".to_string(),
-            bindings_path: "~/.bulwark/bindings.yaml".to_string(),
-            sessions_db_path: "~/.bulwark/sessions.db".to_string(),
+            key_path: "~/.forculus/vault-key.age".to_string(),
+            credentials_dir: "~/.forculus/credentials".to_string(),
+            bindings_path: "~/.forculus/bindings.yaml".to_string(),
+            sessions_db_path: "~/.forculus/sessions.db".to_string(),
             require_sessions: false,
         }
     }
@@ -259,7 +259,7 @@ pub struct AuditConfig {
 impl Default for AuditConfig {
     fn default() -> Self {
         Self {
-            db_path: "~/.bulwark/audit.db".to_string(),
+            db_path: "~/.forculus/audit.db".to_string(),
             enabled: true,
             retention_days: 90,
         }
@@ -398,7 +398,7 @@ pub struct AuthOidcConfig {
     /// Claim name containing group memberships.
     #[serde(default = "default_group_claim")]
     pub group_claim: String,
-    /// Maps IdP group names to Bulwark session fields.
+    /// Maps IdP group names to Forculus session fields.
     #[serde(default)]
     pub group_mapping: HashMap<String, GroupMappingEntry>,
     /// Default session TTL in seconds.
@@ -418,7 +418,7 @@ pub enum SecretSource {
     Env,
     /// Read from a file.
     File,
-    /// Read from Bulwark's credential vault (not yet implemented).
+    /// Read from Forculus's credential vault (not yet implemented).
     Vault,
 }
 
@@ -430,7 +430,7 @@ pub struct ServiceAccountConfig {
     pub enabled: bool,
 }
 
-/// Maps an IdP group name to Bulwark session fields.
+/// Maps an IdP group name to Forculus session fields.
 #[derive(Debug, Clone, Deserialize)]
 pub struct GroupMappingEntry {
     /// Team name to assign.
@@ -449,7 +449,7 @@ fn default_secret_source() -> SecretSource {
 }
 
 fn default_secret_env_var() -> String {
-    "BULWARK_OIDC_CLIENT_SECRET".to_string()
+    "FORCULUS_OIDC_CLIENT_SECRET".to_string()
 }
 
 fn default_scopes() -> Vec<String> {
@@ -485,17 +485,17 @@ pub fn expand_tilde(path: &str) -> String {
 
 /// Load configuration from the given YAML file path.
 ///
-/// Returns [`BulwarkConfig::default()`] when the file does not exist.
+/// Returns [`ForculusConfig::default()`] when the file does not exist.
 /// Returns an error if the file exists but cannot be parsed.
-pub fn load_config(path: &Path) -> bulwark_common::Result<BulwarkConfig> {
+pub fn load_config(path: &Path) -> forculus_common::Result<ForculusConfig> {
     if !path.exists() {
         tracing::info!(?path, "config file not found, using defaults");
-        return Ok(BulwarkConfig::default());
+        return Ok(ForculusConfig::default());
     }
     let contents = std::fs::read_to_string(path)
-        .map_err(|e| bulwark_common::BulwarkError::Config(format!("failed to read config: {e}")))?;
-    let config: BulwarkConfig = serde_yaml::from_str(&contents)
-        .map_err(|e| bulwark_common::BulwarkError::Config(format!("invalid YAML: {e}")))?;
+        .map_err(|e| forculus_common::ForculusError::Config(format!("failed to read config: {e}")))?;
+    let config: ForculusConfig = serde_yaml::from_str(&contents)
+        .map_err(|e| forculus_common::ForculusError::Config(format!("invalid YAML: {e}")))?;
     Ok(config)
 }
 
@@ -505,23 +505,23 @@ mod tests {
 
     #[test]
     fn defaults_are_sensible() {
-        let cfg = BulwarkConfig::default();
+        let cfg = ForculusConfig::default();
         assert_eq!(cfg.proxy.listen_address, "127.0.0.1:8080");
-        assert_eq!(cfg.proxy.tls.ca_dir, "~/.bulwark/ca");
+        assert_eq!(cfg.proxy.tls.ca_dir, "~/.forculus/ca");
         assert_eq!(cfg.logging.format, LogFormat::Json);
         assert_eq!(cfg.logging.level, "info");
     }
 
     #[test]
     fn expand_tilde_works() {
-        let expanded = expand_tilde("~/.bulwark/ca");
+        let expanded = expand_tilde("~/.forculus/ca");
         assert!(!expanded.starts_with('~'));
-        assert!(expanded.ends_with("/.bulwark/ca"));
+        assert!(expanded.ends_with("/.forculus/ca"));
     }
 
     #[test]
     fn missing_file_returns_defaults() {
-        let cfg = load_config(Path::new("/nonexistent/bulwark.yaml")).unwrap();
+        let cfg = load_config(Path::new("/nonexistent/forculus.yaml")).unwrap();
         assert_eq!(cfg.proxy.listen_address, "127.0.0.1:8080");
     }
 
@@ -537,7 +537,7 @@ proxy:
       tool: github
       action_from: "method"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(cfg.proxy.tool_mappings.len(), 2);
         assert_eq!(cfg.proxy.tool_mappings[0].tool, "openai");
         assert_eq!(cfg.proxy.tool_mappings[0].action_from, ActionFrom::UrlPath);
@@ -558,7 +558,7 @@ rate_limit:
       burst: 5
       dimensions: ["session", "operator"]
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.rate_limit.enabled);
         assert_eq!(cfg.rate_limit.default_rpm, 120);
         assert_eq!(cfg.rate_limit.default_burst, 20);
@@ -584,7 +584,7 @@ cost_estimation:
     - tools: ["github"]
       cost: 0.001
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.cost_estimation.enabled);
         assert!((cfg.cost_estimation.default_cost - 0.05).abs() < f64::EPSILON);
         assert_eq!(cfg.cost_estimation.rules.len(), 2);
@@ -625,7 +625,7 @@ proxy:
     - "vault.internal:8200"
     - "mtls.example.org"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(cfg.proxy.tls_passthrough.len(), 3);
         assert_eq!(cfg.proxy.tls_passthrough[0], "*.pinned-service.com");
         assert_eq!(cfg.proxy.tls_passthrough[1], "vault.internal:8200");
@@ -642,7 +642,7 @@ mcp_gateway:
     - "https://app.example.com"
   upstream_servers: []
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
             cfg.mcp_gateway.listen_address.as_deref(),
             Some("0.0.0.0:4000")
@@ -657,7 +657,7 @@ mcp_gateway:
 mcp_gateway:
   upstream_servers: []
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.mcp_gateway.listen_address.is_none());
         assert!(cfg.mcp_gateway.allowed_origins.is_empty());
     }
@@ -668,7 +668,7 @@ mcp_gateway:
 proxy:
   listen_address: "0.0.0.0:9090"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.proxy.tls_passthrough.is_empty());
     }
 
@@ -695,7 +695,7 @@ auth:
     service_accounts:
       enabled: true
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         let oidc = cfg.auth.oidc.expect("oidc should be present");
         assert!(oidc.enabled);
         assert_eq!(oidc.issuer_url, "https://acme.okta.com/oauth2/default");
@@ -728,7 +728,7 @@ auth:
     issuer_url: "https://login.microsoftonline.com/tenant/v2.0"
     client_id: "abc123"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         let oidc = cfg.auth.oidc.expect("oidc should be present");
         assert!(!oidc.enabled);
         assert_eq!(
@@ -736,7 +736,7 @@ auth:
             "https://login.microsoftonline.com/tenant/v2.0"
         );
         assert_eq!(oidc.client_id, "abc123");
-        assert_eq!(oidc.client_secret_env, "BULWARK_OIDC_CLIENT_SECRET");
+        assert_eq!(oidc.client_secret_env, "FORCULUS_OIDC_CLIENT_SECRET");
         assert_eq!(oidc.scopes, vec!["openid", "profile", "groups"]);
         assert_eq!(oidc.group_claim, "groups");
         assert!(oidc.group_mapping.is_empty());
@@ -750,7 +750,7 @@ auth:
 proxy:
   listen_address: "0.0.0.0:8080"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.auth.oidc.is_none());
     }
 
@@ -783,7 +783,7 @@ auth:
       "dev-group":
         team: "engineering"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         let oidc = cfg.auth.oidc.unwrap();
         assert_eq!(oidc.group_mapping.len(), 2);
 
@@ -818,7 +818,7 @@ auth:
     issuer_url: "https://example.com"
     client_id: "test"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.auth.server.enabled);
         assert_eq!(cfg.auth.server.listen_address, "0.0.0.0:9999");
     }
@@ -831,7 +831,7 @@ auth:
     issuer_url: "https://example.com"
     client_id: "test"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(!cfg.auth.server.enabled);
         assert_eq!(cfg.auth.server.listen_address, "127.0.0.1:9082");
     }
@@ -844,7 +844,7 @@ auth:
     issuer_url: "https://example.com"
     client_id: "test"
 "#;
-        let cfg: BulwarkConfig = serde_yaml::from_str(yaml).unwrap();
+        let cfg: ForculusConfig = serde_yaml::from_str(yaml).unwrap();
         let oidc = cfg.auth.oidc.unwrap();
         assert_eq!(oidc.default_session_ttl, 3600);
     }

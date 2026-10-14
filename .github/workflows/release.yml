@@ -53,25 +53,25 @@ jobs:
           if [ "${{ matrix.cross }}" = "true" ]; then
             docker run --rm -v "$(pwd)/target/${{ matrix.target }}/release:/work" \
               ghcr.io/cross-rs/${{ matrix.target }}:main \
-              aarch64-linux-gnu-strip /work/bulwark
+              aarch64-linux-gnu-strip /work/forculus
           else
-            strip target/${{ matrix.target }}/release/bulwark
+            strip target/${{ matrix.target }}/release/forculus
           fi
 
       - name: Package
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../../bulwark-${{ matrix.target }}.tar.gz bulwark
+          tar czf ../../../forculus-${{ matrix.target }}.tar.gz forculus
 
       - name: Compute checksum
-        run: shasum -a 256 bulwark-${{ matrix.target }}.tar.gz > bulwark-${{ matrix.target }}.tar.gz.sha256
+        run: shasum -a 256 forculus-${{ matrix.target }}.tar.gz > forculus-${{ matrix.target }}.tar.gz.sha256
 
       - uses: actions/upload-artifact@v4
         with:
-          name: bulwark-${{ matrix.target }}
+          name: forculus-${{ matrix.target }}
           path: |
-            bulwark-${{ matrix.target }}.tar.gz
-            bulwark-${{ matrix.target }}.tar.gz.sha256
+            forculus-${{ matrix.target }}.tar.gz
+            forculus-${{ matrix.target }}.tar.gz.sha256
 
   release:
     name: Create Release

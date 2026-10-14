@@ -7,7 +7,7 @@ use crate::store::AuditStore;
 /// Delete audit events older than `max_age_days` days.
 ///
 /// Returns the number of events deleted.
-pub fn run_retention(store: &AuditStore, max_age_days: u32) -> bulwark_common::Result<u64> {
+pub fn run_retention(store: &AuditStore, max_age_days: u32) -> forculus_common::Result<u64> {
     if max_age_days == 0 {
         return Ok(0);
     }

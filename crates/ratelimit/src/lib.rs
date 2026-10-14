@@ -1,4 +1,4 @@
-//! Bulwark rate limiting — token-bucket rate limiter and cost tracking.
+//! Forculus rate limiting — token-bucket rate limiter and cost tracking.
 #![forbid(unsafe_code)]
 
 pub mod bucket;

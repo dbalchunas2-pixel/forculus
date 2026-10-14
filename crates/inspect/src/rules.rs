@@ -34,7 +34,7 @@ impl InspectionRuleSet {
     /// Create a rule set from configuration.
     ///
     /// Applies overrides (enable/disable, severity changes) and adds custom patterns.
-    pub fn from_config(config: &InspectionConfig) -> bulwark_common::Result<Self> {
+    pub fn from_config(config: &InspectionConfig) -> forculus_common::Result<Self> {
         let mut rules: Vec<InspectionRule> = builtin_patterns()
             .into_iter()
             .map(|mut matcher| {

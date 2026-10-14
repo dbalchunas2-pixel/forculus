@@ -2,8 +2,8 @@
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
-use bulwark_audit::event::{AuditEvent, Channel, EventOutcome, EventType, RequestInfo};
-use bulwark_audit::store::AuditStore;
+use forculus_audit::event::{AuditEvent, Channel, EventOutcome, EventType, RequestInfo};
+use forculus_audit::store::AuditStore;
 
 fn sample_event() -> AuditEvent {
     AuditEvent::builder(EventType::RequestProcessed, Channel::HttpProxy)

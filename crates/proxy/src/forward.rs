@@ -13,7 +13,7 @@ use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
 use uuid::Uuid;
 
-use bulwark_audit::event::{
+use forculus_audit::event::{
     AuditEvent, Channel, EventOutcome, EventType, RequestInfo, SessionInfo,
 };
 
@@ -38,12 +38,12 @@ pub async fn forward_request(
     let host = uri.host().unwrap_or("unknown").to_string();
     let url = uri.to_string();
 
-    // Validate session from X-Bulwark-Session header if vault is configured.
+    // Validate session from X-Forculus-Session header if vault is configured.
     let session = if let Some(ref vault) = ctx.vault {
         let vault_guard = vault.lock();
         let token = req
             .headers()
-            .get("x-bulwark-session")
+            .get("x-forculus-session")
             .and_then(|v| v.to_str().ok())
             .map(|s| s.to_string());
 
@@ -110,7 +110,7 @@ pub async fn forward_request(
                         resource: None,
                         target: uri.to_string(),
                     })
-                    .error(bulwark_audit::event::ErrorInfo {
+                    .error(forculus_audit::event::ErrorInfo {
                         category: "rate_limit".to_string(),
                         message: format!(
                             "rule={} dimension={}",
@@ -139,8 +139,8 @@ pub async fn forward_request(
 
     // Evaluate policy if engine is configured.
     if let Some(engine) = &ctx.policy_engine {
-        use bulwark_policy::context::RequestContext;
-        use bulwark_policy::verdict::Verdict;
+        use forculus_policy::context::RequestContext;
+        use forculus_policy::verdict::Verdict;
 
         let mut pctx = RequestContext::new(&resolved_tool, &resolved_action);
         if let Some(ref s) = session {
@@ -183,7 +183,7 @@ pub async fn forward_request(
     let injection = if let (Some(vault), Some(session)) = (&ctx.vault, &session) {
         let vault_guard = vault.lock();
         match vault_guard.resolve_credential(&host, session) {
-            Ok(Some(cred)) => Some(bulwark_vault::injection::http_injection(&cred)),
+            Ok(Some(cred)) => Some(forculus_vault::injection::http_injection(&cred)),
             Ok(None) => None,
             Err(e) => {
                 tracing::warn!(error = %e, "credential resolution failed");
@@ -212,7 +212,7 @@ pub async fn forward_request(
     let request_bytes = body_bytes.len() as u64;
 
     // Inspect request body if scanner is configured and request inspection is enabled.
-    let mut inspection_info: Option<bulwark_audit::event::InspectionInfo> = None;
+    let mut inspection_info: Option<forculus_audit::event::InspectionInfo> = None;
     let body_bytes = if let Some(scanner) = ctx
         .content_scanner
         .as_ref()
@@ -231,12 +231,12 @@ pub async fn forward_request(
         }
         if result.should_redact {
             let body_str = std::str::from_utf8(&body_bytes).unwrap_or_default();
-            let redacted = bulwark_inspect::redact_text(body_str, &result.findings);
+            let redacted = forculus_inspect::redact_text(body_str, &result.findings);
             tracing::info!(
                 finding_count = result.findings.len(),
                 "redacted request body before forwarding"
             );
-            inspection_info = Some(bulwark_audit::event::InspectionInfo {
+            inspection_info = Some(forculus_audit::event::InspectionInfo {
                 finding_count: result.findings.len() as u64,
                 action_taken: "redacted".to_string(),
                 max_severity: result
@@ -245,7 +245,7 @@ pub async fn forward_request(
             });
             Bytes::from(redacted.into_bytes())
         } else if !result.findings.is_empty() {
-            inspection_info = Some(bulwark_audit::event::InspectionInfo {
+            inspection_info = Some(forculus_audit::event::InspectionInfo {
                 finding_count: result.findings.len() as u64,
                 action_taken: "logged".to_string(),
                 max_severity: result
@@ -277,7 +277,7 @@ pub async fn forward_request(
         if !tier2_findings.is_empty() {
             let has_block = tier2_findings
                 .iter()
-                .any(|f| f.action == bulwark_inspect::FindingAction::Block);
+                .any(|f| f.action == forculus_inspect::FindingAction::Block);
             if has_block {
                 tracing::warn!(
                     host = %host,
@@ -293,7 +293,7 @@ pub async fn forward_request(
                 .as_ref()
                 .map(|ii| ii.finding_count)
                 .unwrap_or(0);
-            inspection_info = Some(bulwark_audit::event::InspectionInfo {
+            inspection_info = Some(forculus_audit::event::InspectionInfo {
                 finding_count: existing_count + tier2_findings.len() as u64,
                 action_taken: "logged".to_string(),
                 max_severity: inspection_info
@@ -303,7 +303,7 @@ pub async fn forward_request(
         }
     }
 
-    // Build the outbound request, stripping hop-by-hop and Bulwark-internal headers.
+    // Build the outbound request, stripping hop-by-hop and Forculus-internal headers.
     let mut builder = Request::builder().method(parts.method).uri(&uri);
     if let Some(headers) = builder.headers_mut() {
         // Determine which headers to strip (injection strips).
@@ -314,7 +314,7 @@ pub async fn forward_request(
 
         for (name, value) in &parts.headers {
             if !is_hop_by_hop(name.as_str())
-                && !is_bulwark_internal(name.as_str())
+                && !is_forculus_internal(name.as_str())
                 && !strip_set.contains(&name.as_str().to_lowercase())
                 && name.as_str() != "content-length"
             {
@@ -397,12 +397,12 @@ pub async fn forward_request(
                     }
                     if inspection.should_redact {
                         let body_str = std::str::from_utf8(&resp_bytes).unwrap_or_default();
-                        let redacted = bulwark_inspect::redact_text(body_str, &inspection.findings);
+                        let redacted = forculus_inspect::redact_text(body_str, &inspection.findings);
                         tracing::info!(
                             finding_count = inspection.findings.len(),
                             "redacted upstream response before returning to agent"
                         );
-                        inspection_info = Some(bulwark_audit::event::InspectionInfo {
+                        inspection_info = Some(forculus_audit::event::InspectionInfo {
                             finding_count: inspection.findings.len() as u64,
                             action_taken: "redacted".to_string(),
                             max_severity: inspection
@@ -417,7 +417,7 @@ pub async fn forward_request(
                         );
                         redacted_bytes
                     } else if !inspection.findings.is_empty() {
-                        inspection_info = Some(bulwark_audit::event::InspectionInfo {
+                        inspection_info = Some(forculus_audit::event::InspectionInfo {
                             finding_count: inspection.findings.len() as u64,
                             action_taken: "logged".to_string(),
                             max_severity: inspection
@@ -469,7 +469,7 @@ pub async fn forward_request(
                                         resource: None,
                                         target: uri.to_string(),
                                     })
-                                    .error(bulwark_audit::event::ErrorInfo {
+                                    .error(forculus_audit::event::ErrorInfo {
                                         category: "budget".to_string(),
                                         message: e.to_string(),
                                     })
@@ -536,7 +536,7 @@ pub async fn forward_request(
                             resource: None,
                             target: uri.to_string(),
                         })
-                        .error(bulwark_audit::event::ErrorInfo {
+                        .error(forculus_audit::event::ErrorInfo {
                             category: "upstream".to_string(),
                             message: e.to_string(),
                         })
@@ -570,16 +570,16 @@ fn is_hop_by_hop(name: &str) -> bool {
     )
 }
 
-/// Returns `true` for Bulwark-internal headers that must be stripped before
+/// Returns `true` for Forculus-internal headers that must be stripped before
 /// forwarding to upstream servers. These headers are used for governance
-/// between the agent and Bulwark and must never leak to the upstream.
-fn is_bulwark_internal(name: &str) -> bool {
+/// between the agent and Forculus and must never leak to the upstream.
+fn is_forculus_internal(name: &str) -> bool {
     matches!(
         name.to_lowercase().as_str(),
-        "x-bulwark-session"
-            | "x-bulwark-operator"
-            | "x-bulwark-team"
-            | "x-bulwark-project"
-            | "x-bulwark-environment"
+        "x-forculus-session"
+            | "x-forculus-operator"
+            | "x-forculus-team"
+            | "x-forculus-project"
+            | "x-forculus-environment"
     )
 }

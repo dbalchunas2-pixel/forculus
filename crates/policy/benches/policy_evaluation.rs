@@ -2,8 +2,8 @@
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
-use bulwark_policy::context::RequestContext;
-use bulwark_policy::engine::PolicyEngine;
+use forculus_policy::context::RequestContext;
+use forculus_policy::engine::PolicyEngine;
 
 fn generate_policy_yaml(rule_count: usize) -> String {
     let mut rules = String::new();

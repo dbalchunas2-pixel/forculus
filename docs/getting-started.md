@@ -1,6 +1,6 @@
-# Getting Started with Bulwark
+# Getting Started with Forculus
 
-Bulwark is an open-source governance layer for AI agents. This guide will walk you through installation, creating your first policy, and making your first governed request in under 10 minutes.
+Forculus is an open-source governance layer for AI agents. This guide will walk you through installation, creating your first policy, and making your first governed request in under 10 minutes.
 
 ## Prerequisites
 
@@ -13,13 +13,13 @@ Bulwark is an open-source governance layer for AI agents. This guide will walk y
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/bulwark.git
-cd bulwark
+git clone https://github.com/yourusername/forculus.git
+cd forculus
 
 # Build the project
 cargo build --release
 
-# The binary will be at target/release/bulwark
+# The binary will be at target/release/forculus
 # Optionally, add it to your PATH or install it
 cargo install --path crates/cli
 ```
@@ -27,21 +27,21 @@ cargo install --path crates/cli
 ### Option 2: Install from crates.io
 
 ```bash
-cargo install bulwark-cli
+cargo install forculus-cli
 ```
 
 Verify the installation:
 
 ```bash
-bulwark --version
+forculus --version
 ```
 
 ## Initialize a Project
 
-Create a new Bulwark project to hold your policies, credentials, and audit logs:
+Create a new Forculus project to hold your policies, credentials, and audit logs:
 
 ```bash
-bulwark init my-project
+forculus init my-project
 cd my-project
 ```
 
@@ -49,7 +49,7 @@ This creates the following structure:
 
 ```
 my-project/
-├── bulwark.yaml          # Main configuration file
+├── forculus.yaml          # Main configuration file
 ├── policies/             # Directory for policy YAML files
 │   └── default.yaml      # Starter policy
 ├── credentials/          # Directory for encrypted credential files
@@ -122,7 +122,7 @@ rules:
 Sessions authenticate operators and track their actions. Create one:
 
 ```bash
-bulwark session create --operator you@example.com
+forculus session create --operator you@example.com
 ```
 
 This outputs a session token like:
@@ -136,27 +136,27 @@ Save this token - you'll need it for every request.
 To list active sessions:
 
 ```bash
-bulwark session list
+forculus session list
 ```
 
 To revoke a session:
 
 ```bash
-bulwark session revoke bwk_sess_a1b2c3d4...
+forculus session revoke bwk_sess_a1b2c3d4...
 ```
 
 ## Start the Proxy
 
-Start Bulwark in HTTP proxy mode:
+Start Forculus in HTTP proxy mode:
 
 ```bash
-bulwark proxy start
+forculus proxy start
 ```
 
 By default, this starts a proxy on `http://localhost:8080`. You'll see output like:
 
 ```
-[INFO] Bulwark proxy starting on 127.0.0.1:8080
+[INFO] Forculus proxy starting on 127.0.0.1:8080
 [INFO] Loaded 2 policies from policies/
 [INFO] Ready to accept connections
 ```
@@ -164,24 +164,24 @@ By default, this starts a proxy on `http://localhost:8080`. You'll see output li
 To run in the background:
 
 ```bash
-bulwark proxy start --daemon
+forculus proxy start --daemon
 ```
 
 To use a different port:
 
 ```bash
-bulwark proxy start --port 9090
+forculus proxy start --port 9090
 ```
 
 ## Make a Governed Request
 
-With the proxy running, make a request through it. Every request must include the `X-Bulwark-Session` header with your session token.
+With the proxy running, make a request through it. Every request must include the `X-Forculus-Session` header with your session token.
 
 ### Example: Allowed Request
 
 ```bash
 curl -x http://localhost:8080 \
-  -H "X-Bulwark-Session: bwk_sess_a1b2c3d4..." \
+  -H "X-Forculus-Session: bwk_sess_a1b2c3d4..." \
   -H "X-Tool-Name: filesystem:read" \
   https://api.example.com/data
 ```
@@ -192,7 +192,7 @@ If the policy allows it, the request goes through and you'll see the upstream re
 
 ```bash
 curl -x http://localhost:8080 \
-  -H "X-Bulwark-Session: bwk_sess_a1b2c3d4..." \
+  -H "X-Forculus-Session: bwk_sess_a1b2c3d4..." \
   -H "X-Tool-Name: filesystem:write" \
   -X POST \
   https://api.example.com/data
@@ -210,14 +210,14 @@ This will be blocked with a 403 Forbidden response:
 
 ### Tool Name Header
 
-The `X-Tool-Name` header tells Bulwark which tool is being invoked. This is how it matches against policy rules. In MCP mode, this is automatically extracted from the JSON-RPC method.
+The `X-Tool-Name` header tells Forculus which tool is being invoked. This is how it matches against policy rules. In MCP mode, this is automatically extracted from the JSON-RPC method.
 
 ## View the Audit Log
 
 Every governed request is logged to the audit trail. View recent entries:
 
 ```bash
-bulwark audit tail 5
+forculus audit tail 5
 ```
 
 This shows the last 5 audit events in JSON format, including:
@@ -231,7 +231,7 @@ This shows the last 5 audit events in JSON format, including:
 View audit statistics:
 
 ```bash
-bulwark audit stats
+forculus audit stats
 ```
 
 This shows:
@@ -245,21 +245,21 @@ Query specific events:
 
 ```bash
 # Events by operator
-bulwark audit query --operator you@example.com
+forculus audit query --operator you@example.com
 
 # Events by verdict
-bulwark audit query --verdict deny
+forculus audit query --verdict deny
 
 # Events in time range
-bulwark audit query --since 2026-02-01 --until 2026-02-15
+forculus audit query --since 2026-02-01 --until 2026-02-15
 ```
 
 ## Run Doctor
 
-Bulwark includes a diagnostic tool to check your setup:
+Forculus includes a diagnostic tool to check your setup:
 
 ```bash
-bulwark doctor
+forculus doctor
 ```
 
 This validates:
@@ -274,7 +274,7 @@ If something is wrong, `doctor` will report specific issues and suggest fixes.
 
 ## Next Steps
 
-Congratulations! You've set up Bulwark, created a policy, and made your first governed request.
+Congratulations! You've set up Forculus, created a policy, and made your first governed request.
 
 Here's what to explore next:
 
@@ -288,47 +288,47 @@ Here's what to explore next:
 
 5. **Cost Tracking**: Monitor per-operator costs with monthly budgets. See [Cost Tracking Guide](cost-tracking.md)
 
-6. **MCP Integration**: Use Bulwark as an MCP gateway for stdio-based agents. See [MCP Gateway Guide](mcp-gateway.md)
+6. **MCP Integration**: Use Forculus as an MCP gateway for stdio-based agents. See [MCP Gateway Guide](mcp-gateway.md)
 
-7. **Architecture**: Understand how Bulwark works under the hood. See [Architecture Overview](architecture.md)
+7. **Architecture**: Understand how Forculus works under the hood. See [Architecture Overview](architecture.md)
 
-8. **Production Deployment**: Best practices for running Bulwark in production. See [Deployment Guide](deployment.md)
+8. **Production Deployment**: Best practices for running Forculus in production. See [Deployment Guide](deployment.md)
 
 ## Getting Help
 
 - Documentation: `/docs` directory in the repository
-- Issues: [GitHub Issues](https://github.com/yourusername/bulwark/issues)
-- Discussions: [GitHub Discussions](https://github.com/yourusername/bulwark/discussions)
+- Issues: [GitHub Issues](https://github.com/yourusername/forculus/issues)
+- Discussions: [GitHub Discussions](https://github.com/yourusername/forculus/discussions)
 
 ## Quick Reference
 
 ```bash
 # Project management
-bulwark init <name>              # Create new project
-bulwark doctor                   # Validate setup
+forculus init <name>              # Create new project
+forculus doctor                   # Validate setup
 
 # Session management
-bulwark session create --operator <email>
-bulwark session list
-bulwark session revoke <token>
+forculus session create --operator <email>
+forculus session list
+forculus session revoke <token>
 
 # Proxy operations
-bulwark proxy start              # Start proxy on :8080
-bulwark proxy start --port 9090  # Custom port
-bulwark proxy start --daemon     # Background mode
+forculus proxy start              # Start proxy on :8080
+forculus proxy start --port 9090  # Custom port
+forculus proxy start --daemon     # Background mode
 
 # Audit log
-bulwark audit tail <n>           # Last N events
-bulwark audit stats              # Statistics
-bulwark audit query <filters>    # Query events
+forculus audit tail <n>           # Last N events
+forculus audit stats              # Statistics
+forculus audit query <filters>    # Query events
 
 # Policy management
-bulwark policy validate          # Check policy syntax
-bulwark policy test              # Run policy tests
-bulwark policy reload            # Hot-reload policies
+forculus policy validate          # Check policy syntax
+forculus policy test              # Run policy tests
+forculus policy reload            # Hot-reload policies
 
 # Credential management
-bulwark vault add <name>         # Add encrypted credential
-bulwark vault list               # List credentials
-bulwark vault rotate <name>      # Rotate credential
+forculus vault add <name>         # Add encrypted credential
+forculus vault list               # List credentials
+forculus vault rotate <name>      # Rotate credential
 ```

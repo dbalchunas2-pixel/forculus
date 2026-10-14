@@ -1,6 +1,6 @@
 # Policy Reference
 
-Bulwark's policy engine uses YAML files to define governance rules for AI agents. Policies control which tools, actions, and resources agents can access based on conditions like team membership, environment, and agent type.
+Forculus's policy engine uses YAML files to define governance rules for AI agents. Policies control which tools, actions, and resources agents can access based on conditions like team membership, environment, and agent type.
 
 ## Table of Contents
 
@@ -95,7 +95,7 @@ All arrays are optional. If omitted, that dimension matches everything.
 
 ## Match Patterns
 
-Bulwark uses glob-style patterns with the following syntax (case-insensitive):
+Forculus uses glob-style patterns with the following syntax (case-insensitive):
 
 | Pattern | Matches | Example |
 |---------|---------|---------|
@@ -194,7 +194,7 @@ reason: Redact sensitive fields from response
 
 ## Precedence Rules
 
-When multiple rules match a request, Bulwark applies them in this order:
+When multiple rules match a request, Forculus applies them in this order:
 
 1. **Scope** - Higher scopes win (`override` > `agent` > `project` > `team` > `global`)
 2. **Priority** - Higher priority numbers win (default: 0)
@@ -219,21 +219,21 @@ When multiple rules match a request, Bulwark applies them in this order:
 
 ### Default Behavior
 
-If no rules match a request, Bulwark defaults to **deny**. This fail-secure approach ensures unexpected requests are blocked until explicitly allowed.
+If no rules match a request, Forculus defaults to **deny**. This fail-secure approach ensures unexpected requests are blocked until explicitly allowed.
 
 ## Hot Reload
 
-Bulwark supports hot-reloading policies without restarting the service:
+Forculus supports hot-reloading policies without restarting the service:
 
 ```yaml
-# In bulwark.yaml
+# In forculus.yaml
 policy:
-  policies_dir: /etc/bulwark/policies
+  policies_dir: /etc/forculus/policies
   hot_reload: true  # Enable automatic reload on file changes
 ```
 
 When hot reload is enabled:
-- Bulwark watches the policies directory for changes
+- Forculus watches the policies directory for changes
 - New or modified YAML files are loaded automatically
 - Invalid YAML files are logged but don't crash the service
 - Changes take effect immediately for new requests
@@ -244,7 +244,7 @@ When hot reload is enabled:
 You can also trigger a reload by sending SIGHUP:
 
 ```bash
-kill -HUP $(pgrep bulwark)
+kill -HUP $(pgrep forculus)
 ```
 
 ## Examples
@@ -541,7 +541,7 @@ If all requests are being denied:
 
 If policy changes aren't taking effect:
 
-1. Verify `hot_reload: true` in bulwark.yaml
+1. Verify `hot_reload: true` in forculus.yaml
 2. Check file permissions on the policies directory
 3. Review logs for YAML parsing errors
 4. Ensure file system notifications are working (inotify on Linux, FSEvents on macOS)

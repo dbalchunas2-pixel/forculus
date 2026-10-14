@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.bpolania/bulwark",
-  "title": "Bulwark",
+  "name": "io.github.bpolania/forculus",
+  "title": "Forculus",
   "description": "AI agent governance: content scanning, audit logs, policy evaluation, session management.",
   "repository": {
-    "url": "https://github.com/bpolania/bulwark",
+    "url": "https://github.com/bpolania/forculus",
     "source": "github"
   },
-  "websiteUrl": "https://github.com/bpolania/bulwark",
+  "websiteUrl": "https://github.com/bpolania/forculus",
   "version": "0.2.0",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/bpolania/bulwark:v0.2.0",
+      "identifier": "ghcr.io/bpolania/forculus:v0.2.0",
       "transport": {
         "type": "stdio"
       },
@@ -28,13 +28,13 @@
       ],
       "environmentVariables": [
         {
-          "name": "BULWARK_CONFIG",
-          "description": "Path to bulwark.yaml configuration file",
+          "name": "FORCULUS_CONFIG",
+          "description": "Path to forculus.yaml configuration file",
           "isRequired": false,
           "isSecret": false
         },
         {
-          "name": "BULWARK_SESSION_TOKEN",
+          "name": "FORCULUS_SESSION_TOKEN",
           "description": "Session token for operator authentication (bwk_sess_...)",
           "isRequired": false,
           "isSecret": true

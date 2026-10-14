@@ -1,10 +1,10 @@
-//! `bulwark policy` — validate and test policy files.
+//! `forculus policy` — validate and test policy files.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use bulwark_policy::engine::PolicyEngine;
-use bulwark_policy::validation::validate_policies;
+use forculus_policy::engine::PolicyEngine;
+use forculus_policy::validation::validate_policies;
 
 /// Validate policy files in the given directory.
 pub fn validate(path: &Path) -> Result<()> {
@@ -54,14 +54,14 @@ fn run_replay(
     let engine =
         PolicyEngine::from_directory(dir).map_err(|e| anyhow::anyhow!("loading policies: {e}"))?;
 
-    let config = bulwark_config::load_config(config_path).context("loading configuration")?;
-    let db_path = bulwark_config::expand_tilde(&config.audit.db_path);
+    let config = forculus_config::load_config(config_path).context("loading configuration")?;
+    let db_path = forculus_config::expand_tilde(&config.audit.db_path);
     let store =
-        bulwark_audit::store::AuditStore::open(Path::new(&db_path)).context("opening audit db")?;
+        forculus_audit::store::AuditStore::open(Path::new(&db_path)).context("opening audit db")?;
 
-    let mut filter = bulwark_audit::query::AuditFilter {
+    let mut filter = forculus_audit::query::AuditFilter {
         limit: Some(limit),
-        sort: bulwark_audit::query::SortOrder::Ascending,
+        sort: forculus_audit::query::SortOrder::Ascending,
         ..Default::default()
     };
 
@@ -85,7 +85,7 @@ fn run_replay(
 
         replayed += 1;
 
-        let mut ctx = bulwark_policy::context::RequestContext::new(&req.tool, &req.action);
+        let mut ctx = forculus_policy::context::RequestContext::new(&req.tool, &req.action);
         if let Some(ref si) = event.session {
             ctx = ctx.with_operator(&si.operator);
             if let Some(ref team) = si.team {
@@ -106,10 +106,10 @@ fn run_replay(
         let new_verdict = format!("{:?}", evaluation.verdict).to_uppercase();
 
         let old_verdict = match &event.outcome {
-            bulwark_audit::event::EventOutcome::Success => "ALLOW",
-            bulwark_audit::event::EventOutcome::Denied => "DENY",
-            bulwark_audit::event::EventOutcome::Escalated => "ESCALATE",
-            bulwark_audit::event::EventOutcome::Failed => continue,
+            forculus_audit::event::EventOutcome::Success => "ALLOW",
+            forculus_audit::event::EventOutcome::Denied => "DENY",
+            forculus_audit::event::EventOutcome::Escalated => "ESCALATE",
+            forculus_audit::event::EventOutcome::Failed => continue,
         };
 
         let new_simple = match new_verdict.as_str() {
@@ -255,25 +255,25 @@ audit:
             sessions_db = dir.join("sessions.db").display(),
             audit_db = dir.join("audit.db").display(),
         );
-        let config_path = dir.join("bulwark.yaml");
+        let config_path = dir.join("forculus.yaml");
         std::fs::write(&config_path, config).unwrap();
         config_path
     }
 
     fn write_audit_event(
-        store: &bulwark_audit::store::AuditStore,
+        store: &forculus_audit::store::AuditStore,
         tool: &str,
         action: &str,
-        outcome: bulwark_audit::event::EventOutcome,
+        outcome: forculus_audit::event::EventOutcome,
     ) {
         store
             .insert(
-                &bulwark_audit::event::AuditEvent::builder(
-                    bulwark_audit::event::EventType::RequestProcessed,
-                    bulwark_audit::event::Channel::HttpProxy,
+                &forculus_audit::event::AuditEvent::builder(
+                    forculus_audit::event::EventType::RequestProcessed,
+                    forculus_audit::event::Channel::HttpProxy,
                 )
                 .outcome(outcome)
-                .session(bulwark_audit::event::SessionInfo {
+                .session(forculus_audit::event::SessionInfo {
                     session_id: "test-session".into(),
                     operator: "alice".into(),
                     team: None,
@@ -281,7 +281,7 @@ audit:
                     environment: None,
                     agent_type: None,
                 })
-                .request(bulwark_audit::event::RequestInfo {
+                .request(forculus_audit::event::RequestInfo {
                     tool: tool.into(),
                     action: action.into(),
                     resource: None,
@@ -304,25 +304,25 @@ audit:
 
         // Write audit events (all originally allowed).
         let audit_path = dir.path().join("audit.db");
-        let store = bulwark_audit::store::AuditStore::open(&audit_path).unwrap();
+        let store = forculus_audit::store::AuditStore::open(&audit_path).unwrap();
 
         write_audit_event(
             &store,
             "github",
             "list_issues",
-            bulwark_audit::event::EventOutcome::Success,
+            forculus_audit::event::EventOutcome::Success,
         );
         write_audit_event(
             &store,
             "github",
             "create_issue",
-            bulwark_audit::event::EventOutcome::Success,
+            forculus_audit::event::EventOutcome::Success,
         );
         write_audit_event(
             &store,
             "github",
             "delete_repo",
-            bulwark_audit::event::EventOutcome::Success,
+            forculus_audit::event::EventOutcome::Success,
         );
 
         // Create a stricter policy that denies delete*.
@@ -349,16 +349,16 @@ audit:
         let config_path = write_test_config(dir.path());
 
         let audit_path = dir.path().join("audit.db");
-        let store = bulwark_audit::store::AuditStore::open(&audit_path).unwrap();
+        let store = forculus_audit::store::AuditStore::open(&audit_path).unwrap();
 
         // Event 1: SessionCreated (no tool/action).
         store
             .insert(
-                &bulwark_audit::event::AuditEvent::builder(
-                    bulwark_audit::event::EventType::SessionCreated,
-                    bulwark_audit::event::Channel::Cli,
+                &forculus_audit::event::AuditEvent::builder(
+                    forculus_audit::event::EventType::SessionCreated,
+                    forculus_audit::event::Channel::Cli,
                 )
-                .outcome(bulwark_audit::event::EventOutcome::Success)
+                .outcome(forculus_audit::event::EventOutcome::Success)
                 .build(),
             )
             .unwrap();
@@ -366,11 +366,11 @@ audit:
         // Event 2: CredentialInjected (no request info).
         store
             .insert(
-                &bulwark_audit::event::AuditEvent::builder(
-                    bulwark_audit::event::EventType::CredentialInjected,
-                    bulwark_audit::event::Channel::HttpProxy,
+                &forculus_audit::event::AuditEvent::builder(
+                    forculus_audit::event::EventType::CredentialInjected,
+                    forculus_audit::event::Channel::HttpProxy,
                 )
-                .outcome(bulwark_audit::event::EventOutcome::Success)
+                .outcome(forculus_audit::event::EventOutcome::Success)
                 .build(),
             )
             .unwrap();
@@ -380,7 +380,7 @@ audit:
             &store,
             "github",
             "push",
-            bulwark_audit::event::EventOutcome::Success,
+            forculus_audit::event::EventOutcome::Success,
         );
 
         let policy_dir = dir.path().join("policies");
@@ -403,7 +403,7 @@ audit:
         let config_path = write_test_config(dir.path());
 
         let audit_path = dir.path().join("audit.db");
-        let store = bulwark_audit::store::AuditStore::open(&audit_path).unwrap();
+        let store = forculus_audit::store::AuditStore::open(&audit_path).unwrap();
 
         // Write 20 events.
         for i in 0..20 {
@@ -411,7 +411,7 @@ audit:
                 &store,
                 "github",
                 &format!("action_{i}"),
-                bulwark_audit::event::EventOutcome::Success,
+                forculus_audit::event::EventOutcome::Success,
             );
         }
 

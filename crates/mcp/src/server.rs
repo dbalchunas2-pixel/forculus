@@ -19,7 +19,7 @@ use crate::transport::stdio::StdioTransport;
 pub async fn run_stdio_server(
     gateway: Arc<McpGateway>,
     shutdown: CancellationToken,
-) -> bulwark_common::Result<()> {
+) -> forculus_common::Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
     let mut transport = StdioTransport::new(stdin, stdout);
@@ -61,15 +61,15 @@ pub async fn run_http_server(
     listen_addr: &str,
     allowed_origins: Vec<String>,
     shutdown: CancellationToken,
-) -> bulwark_common::Result<()> {
+) -> forculus_common::Result<()> {
     let listener = TcpListener::bind(listen_addr).await.map_err(|e| {
-        bulwark_common::BulwarkError::Mcp(format!("failed to bind {listen_addr}: {e}"))
+        forculus_common::ForculusError::Mcp(format!("failed to bind {listen_addr}: {e}"))
     })?;
 
     let local_addr = listener.local_addr()?;
     tracing::info!(
         address = %local_addr,
-        version = bulwark_common::VERSION,
+        version = forculus_common::VERSION,
         "MCP HTTP server started"
     );
 
@@ -128,11 +128,11 @@ pub async fn run_http_server_with_listener(
     listener: TcpListener,
     allowed_origins: Vec<String>,
     shutdown: CancellationToken,
-) -> bulwark_common::Result<()> {
+) -> forculus_common::Result<()> {
     let local_addr = listener.local_addr()?;
     tracing::info!(
         address = %local_addr,
-        version = bulwark_common::VERSION,
+        version = forculus_common::VERSION,
         "MCP HTTP server started"
     );
 

@@ -236,7 +236,7 @@ Response to agent:
 
 ## Configuration
 
-Configure content inspection in `bulwark.yaml`:
+Configure content inspection in `forculus.yaml`:
 
 ```yaml
 content_inspection:
@@ -358,16 +358,16 @@ When content inspection is enabled:
 
 ```bash
 # Show all content inspection findings
-bulwark audit query --event-type ContentInspectionTriggered --since 24h
+forculus audit query --event-type ContentInspectionTriggered --since 24h
 
 # Show critical findings only
-bulwark audit query \
+forculus audit query \
   --event-type ContentInspectionTriggered \
   --since 7d | \
   jq 'select(.details.severity == "Critical")'
 
 # Group findings by rule
-bulwark audit export \
+forculus audit export \
   --event-type ContentInspectionTriggered \
   --since 30d \
   --output findings.jsonl
@@ -384,7 +384,7 @@ Set up alerts for critical findings:
 # check-critical-findings.sh
 
 # Run every 5 minutes via cron
-CRITICAL_COUNT=$(bulwark audit query \
+CRITICAL_COUNT=$(forculus audit query \
   --event-type ContentInspectionTriggered \
   --since 5m \
   --format json | \
@@ -395,7 +395,7 @@ if [ "$CRITICAL_COUNT" -gt 0 ]; then
   # Send to PagerDuty, Slack, etc.
   curl -X POST https://events.pagerduty.com/v2/enqueue \
     -H 'Content-Type: application/json' \
-    -d "{\"event_action\": \"trigger\", \"payload\": {\"summary\": \"Bulwark: $CRITICAL_COUNT critical findings\"}}"
+    -d "{\"event_action\": \"trigger\", \"payload\": {\"summary\": \"Forculus: $CRITICAL_COUNT critical findings\"}}"
 fi
 ```
 
@@ -456,7 +456,7 @@ Review findings weekly or monthly:
 
 ```bash
 # Monthly content inspection report
-bulwark audit export \
+forculus audit export \
   --event-type ContentInspectionTriggered \
   --since 30d \
   --output monthly-findings.jsonl
@@ -489,7 +489,7 @@ content_inspection:
 If a rule isn't detecting expected patterns:
 
 1. Test the regex pattern independently
-2. Check if content inspection is enabled: `bulwark config show`
+2. Check if content inspection is enabled: `forculus config show`
 3. Verify rule is enabled in config
 4. Check max_body_size - content may be truncated
 5. Review audit logs for scan errors
@@ -498,7 +498,7 @@ If a rule isn't detecting expected patterns:
 
 If a rule triggers on legitimate data:
 
-1. Review recent findings: `bulwark audit query --event-type ContentInspectionTriggered --since 7d`
+1. Review recent findings: `forculus audit query --event-type ContentInspectionTriggered --since 7d`
 2. Disable or tune the rule
 3. Add exceptions for known patterns
 4. Change action from Block to Redact or Log
@@ -589,7 +589,7 @@ content_inspection:
 
 ```bash
 # Export findings hourly
-bulwark audit export \
+forculus audit export \
   --event-type ContentInspectionTriggered \
   --since 1h \
   --output /tmp/findings.jsonl
@@ -604,7 +604,7 @@ curl -X POST "https://splunk.example.com/services/collector" \
 
 ```bash
 # Send critical findings to Slack
-bulwark audit query \
+forculus audit query \
   --event-type ContentInspectionTriggered \
   --since 5m \
   --format json | \
@@ -615,6 +615,6 @@ bulwark audit query \
 
     curl -X POST "https://hooks.slack.com/services/YOUR/WEBHOOK/URL" \
       -H 'Content-Type: application/json' \
-      -d "{\"text\": \"Bulwark Alert: $SEVERITY finding - $RULE\"}"
+      -d "{\"text\": \"Forculus Alert: $SEVERITY finding - $RULE\"}"
   done
 ```

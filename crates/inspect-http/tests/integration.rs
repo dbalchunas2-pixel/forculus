@@ -1,7 +1,7 @@
 //! Integration tests for the HTTP callout analyzer pipeline.
 
-use bulwark_inspect_http::HttpAnalyzerPipeline;
-use bulwark_inspect_http::config::{
+use forculus_inspect_http::HttpAnalyzerPipeline;
+use forculus_inspect_http::config::{
     AnalyzerCondition, CacheConfig, CircuitBreakerConfig, HttpAnalyzerConfig, OnError,
 };
 use wiremock::matchers::{method, path};
@@ -62,8 +62,8 @@ async fn successful_callout_returns_findings() {
         .await;
 
     assert_eq!(findings.len(), 1);
-    assert_eq!(findings[0].action, bulwark_inspect::FindingAction::Redact);
-    assert_eq!(findings[0].severity, bulwark_inspect::Severity::High);
+    assert_eq!(findings[0].action, forculus_inspect::FindingAction::Redact);
+    assert_eq!(findings[0].severity, forculus_inspect::Severity::High);
 }
 
 #[tokio::test]
@@ -114,7 +114,7 @@ async fn fail_closed_on_error() {
 
     // fail_closed: synthetic deny finding
     assert_eq!(findings.len(), 1);
-    assert_eq!(findings[0].action, bulwark_inspect::FindingAction::Block);
+    assert_eq!(findings[0].action, forculus_inspect::FindingAction::Block);
     assert!(findings[0].rule_id.contains("unavailable"));
 }
 

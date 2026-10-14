@@ -1,4 +1,4 @@
-//! Bulwark inspect — content inspection for sensitive data, PII, and prompt injection.
+//! Forculus inspect — content inspection for sensitive data, PII, and prompt injection.
 #![forbid(unsafe_code)]
 
 pub mod config;

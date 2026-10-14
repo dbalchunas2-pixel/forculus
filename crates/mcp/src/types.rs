@@ -18,7 +18,7 @@ pub const SESSION_TERMINATED: i64 = -32005;
 // ── HTTP transport constants ────────────────────────────────────────
 
 pub const MCP_SESSION_HEADER: &str = "Mcp-Session-Id";
-pub const BULWARK_SESSION_HEADER: &str = "X-Bulwark-Session";
+pub const FORCULUS_SESSION_HEADER: &str = "X-Forculus-Session";
 
 // ── JSON-RPC 2.0 primitives ─────────────────────────────────────────
 

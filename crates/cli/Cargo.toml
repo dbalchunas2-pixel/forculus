@@ -1,26 +1,26 @@
 [package]
-name = "bulwark-cli"
+name = "forculus-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Bulwark CLI entry point"
+description = "Forculus CLI entry point"
 
 [[bin]]
-name = "bulwark"
+name = "forculus"
 path = "src/main.rs"
 
 [dependencies]
-bulwark-common.workspace = true
-bulwark-config.workspace = true
-bulwark-proxy.workspace = true
-bulwark-mcp.workspace = true
-bulwark-policy.workspace = true
-bulwark-vault.workspace = true
-bulwark-audit.workspace = true
-bulwark-inspect.workspace = true
-bulwark-inspect-http.workspace = true
-bulwark-auth.workspace = true
+forculus-common.workspace = true
+forculus-config.workspace = true
+forculus-proxy.workspace = true
+forculus-mcp.workspace = true
+forculus-policy.workspace = true
+forculus-vault.workspace = true
+forculus-audit.workspace = true
+forculus-inspect.workspace = true
+forculus-inspect-http.workspace = true
+forculus-auth.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 clap.workspace = true
