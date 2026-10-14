@@ -2,44 +2,36 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Bulwark, please report it responsibly.
+**Contact:** security@forculus.[domain pending - see docs/SCAFFOLDING.md] 
 
-**Do NOT open a public GitHub issue for security vulnerabilities.**
+If you have found a vulnerability in Forculus, please report it privately. Do not open a public GitHub issue for security reports.
 
-Instead, please email the maintainers directly with:
+Please include:
+- Affected version (commit hash or release tag)
+- A description of the vulnerability and its impact
+- Steps to reproduce or a proof of concept
+- Any suggested mitigation
 
-1. A description of the vulnerability
-2. Steps to reproduce
-3. Potential impact
-4. Suggested fix (if any)
+## Response Commitment
 
-We will acknowledge receipt within 48 hours and provide a timeline for a fix.
+- **Acknowledgment:** within 72 hours of report.
+- **Triage and severity assessment:** within 7 days.
+- **Fix or mitigation target:** within 30 days for critical/high issues; 90 days for medium/low.
+- We will keep you informed throughout and credit reporters in release notes unless you prefer anonymity.
 
-## Supported Versions
+## Coordinated Disclosure
 
-| Version | Supported |
-| ------- | --------- |
-| 0.1.x   | Yes       |
-
-## Security Measures
-
-Bulwark implements several security measures:
-
-- **`#![forbid(unsafe_code)]`** in all crates
-- **Content inspection** with secret detection and PII scanning
-- **Hash-chained audit log** for tamper detection
-- **Session-scoped credential injection** (secrets never exposed to agents)
-- **Policy engine** with default-deny semantics
-- **Header stripping** to prevent credential leakage to upstream servers
-- **cargo-deny** for dependency auditing
+We practice coordinated disclosure. We ask that you give us a reasonable window (90 days default) to ship a fix before public disclosure. We will never take legal action against good-faith research conducted within this policy.
 
 ## Scope
 
-The following are in scope for security reports:
+In scope: all crates in this repository, the Tauri GUI, distributed binaries, and the update mechanism.
 
-- Authentication/authorization bypasses
-- Credential leakage through the proxy
-- Policy engine bypasses
-- Audit log tampering
-- TLS/MITM implementation flaws
-- Injection attacks through configuration
+Out of scope (do not report via this process):
+- Vulnerabilities in upstream MCP servers (report to the server's maintainer; if Forculus should detect/contain it, tell us too)
+- Social engineering of individual users
+- Reports from automated scanners without a demonstrated impact path
+
+## Security Philosophy
+
+Forculus is local-first (ADR-0001): arguments, credentials, and tool payloads never leave the user's machine by design. Reports showing an unintended egress path are automatically critical severity.
