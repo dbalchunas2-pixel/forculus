@@ -128,7 +128,7 @@ forculus session create --operator you@example.com
 This outputs a session token like:
 
 ```
-bwk_sess_a1b2c3d4e5f6789012345678901234567890abcdef01234567890abcdef0123
+fcl_sess_a1b2c3d4e5f6789012345678901234567890abcdef01234567890abcdef0123
 ```
 
 Save this token - you'll need it for every request.
@@ -142,7 +142,7 @@ forculus session list
 To revoke a session:
 
 ```bash
-forculus session revoke bwk_sess_a1b2c3d4...
+forculus session revoke fcl_sess_a1b2c3d4...
 ```
 
 ## Start the Proxy
@@ -181,7 +181,7 @@ With the proxy running, make a request through it. Every request must include th
 
 ```bash
 curl -x http://localhost:8080 \
-  -H "X-Forculus-Session: bwk_sess_a1b2c3d4..." \
+  -H "X-Forculus-Session: fcl_sess_a1b2c3d4..." \
   -H "X-Tool-Name: filesystem:read" \
   https://api.example.com/data
 ```
@@ -192,7 +192,7 @@ If the policy allows it, the request goes through and you'll see the upstream re
 
 ```bash
 curl -x http://localhost:8080 \
-  -H "X-Forculus-Session: bwk_sess_a1b2c3d4..." \
+  -H "X-Forculus-Session: fcl_sess_a1b2c3d4..." \
   -H "X-Tool-Name: filesystem:write" \
   -X POST \
   https://api.example.com/data

@@ -9,7 +9,7 @@ The credential vault system consists of:
 - **Encrypted storage**: Credentials are encrypted with age and stored as `.age` files
 - **Metadata sidecars**: Each credential has a `.meta.json` file with non-sensitive metadata
 - **Credential bindings**: YAML configuration mapping tools to credentials with scope constraints
-- **Session tokens**: `bwk_sess_` prefixed tokens for authenticating sessions
+- **Session tokens**: `fcl_sess_` prefixed tokens for authenticating sessions
 - **Automatic injection**: Credentials are injected into requests based on bindings
 
 ## Adding Credentials
@@ -176,11 +176,11 @@ Sessions authenticate agents and track usage across requests.
 forculus session create --operator alice
 
 # Output:
-# Session created: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+# Session created: fcl_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 # Store this token securely - it won't be shown again
 ```
 
-Session tokens have the format: `bwk_sess_` + 32 hexadecimal characters.
+Session tokens have the format: `fcl_sess_` + 32 hexadecimal characters.
 
 ### Using Sessions
 
@@ -189,7 +189,7 @@ Sessions are passed via the `X-Forculus-Session` header:
 ```http
 GET /api/resource HTTP/1.1
 Host: api.example.com
-X-Forculus-Session: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+X-Forculus-Session: fcl_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ```
 
 For MCP, configure the session token in the MCP client configuration.
@@ -283,7 +283,7 @@ Complete example of setting up credentials for a GitHub integration:
 ```bash
 # 1. Create a session for the operator
 forculus session create --operator alice
-# Save token: bwk_sess_abc123...
+# Save token: fcl_sess_abc123...
 
 # 2. Add GitHub credential
 forculus cred add github-token
@@ -305,7 +305,7 @@ EOF
 
 # 4. Test the integration
 curl -x http://localhost:8080 \
-  -H "X-Forculus-Session: bwk_sess_abc123..." \
+  -H "X-Forculus-Session: fcl_sess_abc123..." \
   https://api.github.com/user/repos
 
 # 5. Check audit logs
@@ -336,7 +336,7 @@ If credential is found but not injected:
 
 If session is rejected:
 
-1. Verify token format: `bwk_sess_` + 32 hex chars
+1. Verify token format: `fcl_sess_` + 32 hex chars
 2. Check expiration: `forculus session list`
 3. Verify session exists: Query sessions.db directly if needed
 4. Create new session if expired

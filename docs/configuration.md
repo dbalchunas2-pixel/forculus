@@ -263,7 +263,7 @@ When `require_sessions` is enabled, all requests must include a valid session to
 
 ```bash
 # HTTP Proxy
-curl -H "X-Forculus-Session: bwk_sess_abc123..." https://api.github.com/user
+curl -H "X-Forculus-Session: fcl_sess_abc123..." https://api.github.com/user
 
 # MCP Gateway (session stored per connection)
 ```

@@ -117,9 +117,9 @@ mod tests {
     fn set_vault_token() {
         let mgr = SessionManager::new();
         let id = mgr.create_session();
-        mgr.set_vault_token(&id, "bwk_sess_abc123".to_string());
+        mgr.set_vault_token(&id, "fcl_sess_abc123".to_string());
         let session = mgr.get_session(&id).unwrap();
-        assert_eq!(session.vault_token.as_deref(), Some("bwk_sess_abc123"));
+        assert_eq!(session.vault_token.as_deref(), Some("fcl_sess_abc123"));
     }
 
     #[test]

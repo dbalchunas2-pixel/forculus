@@ -544,7 +544,7 @@ async fn proxy_returns_401_for_invalid_session_token() {
     // Request with invalid token → 401.
     let resp = client
         .get(format!("http://{echo_addr}/test"))
-        .header("X-Forculus-Session", "bwk_sess_invalid_token_value_here00")
+        .header("X-Forculus-Session", "fcl_sess_invalid_token_value_here00")
         .send()
         .await
         .expect("proxied request");
@@ -1000,7 +1000,7 @@ rules:
         .get(format!("http://{echo_addr}/test"))
         .header(
             "X-Forculus-Session",
-            "bwk_sess_test123456789abcdef0123456789abcdef",
+            "fcl_sess_test123456789abcdef0123456789abcdef",
         )
         .send()
         .await
@@ -2625,7 +2625,7 @@ async fn adversarial_credential_not_leaked_in_errors() {
         .expect("client");
 
     // 1. Request with an invalid session token → 401.
-    let bad_token = "bwk_sess_0000000000000000000000000000dead";
+    let bad_token = "fcl_sess_0000000000000000000000000000dead";
     let resp = client
         .get(format!("http://{echo_addr}/test"))
         .header("X-Forculus-Session", bad_token)
@@ -2700,7 +2700,7 @@ async fn adversarial_timing_safe_session_validation() {
         .expect("client");
 
     // Measure time for 10 requests with a non-existent valid-format token.
-    let nonexistent_token = "bwk_sess_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1";
+    let nonexistent_token = "fcl_sess_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1";
     let mut nonexistent_durations = Vec::new();
     for _ in 0..10 {
         let start = std::time::Instant::now();

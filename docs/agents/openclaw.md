@@ -137,7 +137,7 @@ mcp:
         - mcp
         - gateway
       env:
-        FORCULUS_SESSION_TOKEN: "bwk_sess_your_session_token_here"
+        FORCULUS_SESSION_TOKEN: "fcl_sess_your_session_token_here"
 
 # OpenClaw agent configuration
 agent:
@@ -159,7 +159,7 @@ agent:
 forculus session create --operator openclaw-agent
 
 # Output:
-# Session created: bwk_sess_o1p2e3n4c5l6a7w8x9y0z1a2b3c4d5e6
+# Session created: fcl_sess_o1p2e3n4c5l6a7w8x9y0z1a2b3c4d5e6
 # Store this token securely - it won't be shown again
 ```
 
@@ -319,7 +319,7 @@ Complete example of using OpenClaw with Forculus governance:
 
 # 2. Create session
 forculus session create --operator openclaw-agent
-# Token: bwk_sess_abc123...
+# Token: fcl_sess_abc123...
 
 # 3. Add token to OpenClaw config
 # (See step 2 in Configuration)
@@ -863,17 +863,17 @@ When using OpenClaw's agent chaining, each sub-agent can have its own session:
 ```yaml
 # Main agent
 main_agent:
-  session_token: "bwk_sess_main..."
+  session_token: "fcl_sess_main..."
   policies: "main-agent-policies.yaml"
 
 # Research sub-agent (read-only)
 research_agent:
-  session_token: "bwk_sess_research..."
+  session_token: "fcl_sess_research..."
   policies: "research-agent-policies.yaml"
 
 # Action sub-agent (write access with approval)
 action_agent:
-  session_token: "bwk_sess_action..."
+  session_token: "fcl_sess_action..."
   policies: "action-agent-policies.yaml"
 ```
 

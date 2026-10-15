@@ -119,7 +119,7 @@ rate_limiting:
     burst: 5
 ```
 
-Request from operator "alice", session "bwk_sess_abc123", tool "github::list-repos":
+Request from operator "alice", session "fcl_sess_abc123", tool "github::list-repos":
 
 1. Check global limit: 1000 RPM - PASS (50 requests this minute)
 2. Check operator limit: 300 RPM - PASS (80 requests this minute)
@@ -509,12 +509,12 @@ rate_limiting:
 
   session_configs:
     # Production sessions
-    - pattern: "bwk_sess_prod_*"
+    - pattern: "fcl_sess_prod_*"
       requests_per_minute: 300
       burst: 30
 
     # Development sessions
-    - pattern: "bwk_sess_dev_*"
+    - pattern: "fcl_sess_dev_*"
       requests_per_minute: 60
       burst: 5
 ```

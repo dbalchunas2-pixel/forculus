@@ -43,10 +43,10 @@ Forculus defines three trust zones separated by two enforcement boundaries.
 
 ### 1. Session Token Theft and Replay
 
-**Threat**: An attacker obtains a valid `bwk_sess_` token and replays it to impersonate the associated operator.
+**Threat**: An attacker obtains a valid `fcl_sess_` token and replays it to impersonate the associated operator.
 
 **How tokens work today**:
-- Format: `bwk_sess_` + 32 random hex characters (128 bits of entropy)
+- Format: `fcl_sess_` + 32 random hex characters (128 bits of entropy)
 - Stored as keyed blake3 hashes in SQLite (never stored in plaintext after creation)
 - Passed via `X-Forculus-Session` header (HTTP) or `initialize` params (MCP)
 

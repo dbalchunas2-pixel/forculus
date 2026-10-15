@@ -27,7 +27,7 @@ Logged for every HTTP request or MCP tool call processed by Forculus.
   "event_type": "RequestProcessed",
   "timestamp": "2026-02-15T10:30:45Z",
   "operator_id": "alice",
-  "session_token": "bwk_sess_abc123...",
+  "session_token": "fcl_sess_abc123...",
   "details": {
     "method": "GET",
     "url": "https://api.github.com/user/repos",
@@ -94,7 +94,7 @@ Logged when a new session is created.
   "timestamp": "2026-02-15T09:00:00Z",
   "operator_id": "alice",
   "details": {
-    "session_token": "bwk_sess_abc123...",
+    "session_token": "fcl_sess_abc123...",
     "expires_at": "2026-02-16T09:00:00Z",
     "created_by": "cli"
   }
@@ -112,7 +112,7 @@ Logged when a session expires or is invalidated.
   "timestamp": "2026-02-16T09:00:00Z",
   "operator_id": "alice",
   "details": {
-    "session_token": "bwk_sess_abc123...",
+    "session_token": "fcl_sess_abc123...",
     "reason": "timeout",
     "lifetime_seconds": 86400
   }

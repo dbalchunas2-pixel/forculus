@@ -132,7 +132,7 @@ In MCP mode, Forculus acts as a transparent gateway between an MCP client (the a
 
 **Session handling**:
 
-- Session token passed in `initialize` params: `{"session_token": "bwk_sess_..."}`
+- Session token passed in `initialize` params: `{"session_token": "fcl_sess_..."}`
 - Stored in interior mutable state (`parking_lot::Mutex<Option<String>>`)
 - Validated on every `tools/call` request
 
@@ -162,7 +162,7 @@ In HTTP proxy mode, Forculus acts as a forward proxy that intercepts HTTP and HT
 
 **Session handling**:
 
-- Session token passed in every request: `X-Forculus-Session: bwk_sess_...`
+- Session token passed in every request: `X-Forculus-Session: fcl_sess_...`
 - Validated against SQLite session store
 
 **TLS MITM**:
@@ -350,7 +350,7 @@ Understanding what data goes where is critical for operating Forculus.
 **Security notes**:
 - `ca-key.pem` should have restricted permissions (600) - needed for TLS MITM
 - Credential `.age` files are encrypted; even if stolen, attacker needs age private key
-- Session tokens are long random strings (`bwk_sess_` + 64 hex chars); brute-force infeasible
+- Session tokens are long random strings (`fcl_sess_` + 32 hex characters (128 bits of entropy)); brute-force infeasible
 - Audit log stores hashes, not full request/response bodies (privacy + performance)
 
 ### In-Memory State

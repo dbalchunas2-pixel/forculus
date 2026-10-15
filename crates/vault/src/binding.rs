@@ -193,7 +193,7 @@ mod tests {
     ) -> Session {
         Session {
             id: "test-id".to_string(),
-            token: "bwk_sess_0000000000000000".to_string(),
+            token: "fcl_sess_0000000000000000".to_string(),
             operator: operator.to_string(),
             team: team.map(String::from),
             project: project.map(String::from),

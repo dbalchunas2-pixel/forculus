@@ -154,7 +154,7 @@ Or in Codex configuration file:
 forculus session create --operator codex-agent
 
 # Output:
-# Session created: bwk_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6
+# Session created: fcl_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6
 ```
 
 Configure Codex to send this token in requests:
@@ -162,7 +162,7 @@ Configure Codex to send this token in requests:
 ```json
 {
   "headers": {
-    "X-Forculus-Session": "bwk_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6"
+    "X-Forculus-Session": "fcl_sess_c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6"
   }
 }
 ```
@@ -429,14 +429,14 @@ forculus proxy start
 
 # 2. Create session
 forculus session create --operator codex-agent
-# Token: bwk_sess_abc123...
+# Token: fcl_sess_abc123...
 
 # 3. Configure Codex to use proxy and session token
 export HTTP_PROXY=http://localhost:8080
 export HTTPS_PROXY=http://localhost:8080
 
 # 4. Start Codex
-codex start --header "X-Forculus-Session: bwk_sess_abc123..."
+codex start --header "X-Forculus-Session: fcl_sess_abc123..."
 ```
 
 ### Interaction
@@ -446,7 +446,7 @@ Codex: Listing GitHub repositories...
 
 [HTTP Request]
 GET https://api.github.com/user/repos
-X-Forculus-Session: bwk_sess_abc123...
+X-Forculus-Session: fcl_sess_abc123...
 
 [Forculus Processing]
 1. Extract session: codex-agent
@@ -467,7 +467,7 @@ Codex: Creating issue in repo1...
 
 [HTTP Request]
 POST https://api.github.com/user/repos/repo1/issues
-X-Forculus-Session: bwk_sess_abc123...
+X-Forculus-Session: fcl_sess_abc123...
 Content-Type: application/json
 
 {"title": "Add login button", "body": "We need a login button"}
@@ -500,7 +500,7 @@ Codex: Retrying after approval...
 
 [HTTP Request]
 POST https://api.github.com/user/repos/repo1/issues
-X-Forculus-Session: bwk_sess_abc123...
+X-Forculus-Session: fcl_sess_abc123...
 X-Forculus-Approval-Token: appr_xyz
 Content-Type: application/json
 
@@ -523,7 +523,7 @@ Codex: Deleting repository repo2...
 
 [HTTP Request]
 DELETE https://api.github.com/repos/owner/repo2
-X-Forculus-Session: bwk_sess_abc123...
+X-Forculus-Session: fcl_sess_abc123...
 
 [Forculus Processing]
 1. Map URL to tool: github::delete-repo
@@ -549,7 +549,7 @@ Codex: Posting to Slack...
 
 [HTTP Request]
 POST https://slack.com/api/chat.postMessage
-X-Forculus-Session: bwk_sess_abc123...
+X-Forculus-Session: fcl_sess_abc123...
 Content-Type: application/json
 
 {"channel": "#general", "text": "Our AWS key is AKIAIOSFODNN7EXAMPLE"}

@@ -67,7 +67,7 @@ mod tests {
             content_type: Some("application/json".into()),
             body: "aGVsbG8=".into(),
             metadata: AnalyzerMetadata {
-                session_id: Some("bwk_sess_abc".into()),
+                session_id: Some("fcl_sess_abc".into()),
                 operator: Some("alice@acme.com".into()),
             },
         };

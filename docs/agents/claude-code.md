@@ -100,7 +100,7 @@ Edit Claude Code's MCP settings file (`~/.claude/config.json` or similar):
       "command": "forculus",
       "args": ["mcp", "gateway"],
       "env": {
-        "FORCULUS_SESSION_TOKEN": "bwk_sess_your_session_token_here"
+        "FORCULUS_SESSION_TOKEN": "fcl_sess_your_session_token_here"
       }
     }
   }
@@ -116,7 +116,7 @@ Note: Instead of connecting directly to MCP servers, Claude Code connects to For
 forculus session create --operator alice
 
 # Output:
-# Session created: bwk_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+# Session created: fcl_sess_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 # Store this token securely - it won't be shown again
 ```
 
@@ -323,7 +323,7 @@ Complete example of using Claude Code with Forculus governance:
 
 # 2. Create session
 forculus session create --operator alice
-# Token: bwk_sess_abc123...
+# Token: fcl_sess_abc123...
 
 # 3. Add to Claude Code config
 # (See step 2 in Configuration)
@@ -417,7 +417,7 @@ All interactions are logged to Forculus's audit system:
 forculus audit query --operator alice --since 1h
 
 # Output:
-# 2026-02-15 10:30:00 | SessionCreated | alice | Created session bwk_sess_abc123...
+# 2026-02-15 10:30:00 | SessionCreated | alice | Created session fcl_sess_abc123...
 # 2026-02-15 10:31:00 | RequestProcessed | alice | github::list-repos | 200 OK
 # 2026-02-15 10:31:00 | PolicyDecision | alice | github::list-repos | allow
 # 2026-02-15 10:32:00 | RequestProcessed | alice | github::create-issue | 200 OK
@@ -506,13 +506,13 @@ Rotate session tokens monthly:
 
 ```bash
 # Create new session
-NEW_TOKEN=$(forculus session create --operator alice | grep "bwk_sess_" | awk '{print $3}')
+NEW_TOKEN=$(forculus session create --operator alice | grep "fcl_sess_" | awk '{print $3}')
 
 # Update Claude Code config
 # (Manual step or automation)
 
 # Revoke old session
-forculus session revoke bwk_sess_old_token_here
+forculus session revoke fcl_sess_old_token_here
 ```
 
 ## Troubleshooting

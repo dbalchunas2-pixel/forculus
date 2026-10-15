@@ -935,8 +935,8 @@ mod tests {
 
     #[test]
     fn callback_html_contains_token() {
-        let html = callback_html("bwk_sess_abc123");
-        assert!(html.contains("bwk_sess_abc123"));
+        let html = callback_html("fcl_sess_abc123");
+        assert!(html.contains("fcl_sess_abc123"));
         assert!(html.contains("Session Created"));
         assert!(html.contains("Copy to Clipboard"));
     }
