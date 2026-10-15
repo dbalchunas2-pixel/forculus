@@ -58,12 +58,12 @@ pub struct CreateSessionParams {
     pub description: Option<String>,
 }
 
-/// Generate a session token: `bwk_sess_` + 32 random hex characters.
+/// Generate a session token: `fcl_sess_` + 32 random hex characters.
 fn generate_token() -> String {
     let mut rng = rand::thread_rng();
     let bytes: [u8; 16] = rand::Rng::r#gen(&mut rng);
     let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-    format!("bwk_sess_{hex}")
+    format!("fcl_sess_{hex}")
 }
 
 /// SQLite-backed session store with keyed token hashing.
@@ -277,11 +277,11 @@ impl SessionStore {
     /// to prevent token enumeration).
     pub fn validate(&self, token: &str) -> forculus_common::Result<Option<Session>> {
         // Runtime validation: reject tokens with obviously wrong format early.
-        if !token.starts_with("bwk_sess_") {
+        if !token.starts_with("fcl_sess_") {
             return Ok(None);
         }
         if token.len() != 41 {
-            // "bwk_sess_" (9) + 32 hex chars = 41
+            // "fcl_sess_" (9) + 32 hex chars = 41
             return Ok(None);
         }
 
@@ -482,7 +482,7 @@ mod tests {
             })
             .unwrap();
 
-        assert!(session.token.starts_with("bwk_sess_"));
+        assert!(session.token.starts_with("fcl_sess_"));
         assert_eq!(session.token.len(), 9 + 32); // prefix + 32 hex chars
         assert_eq!(session.operator, "alice");
         assert_eq!(session.team, Some("engineering".to_string()));
@@ -513,7 +513,7 @@ mod tests {
     fn validate_unknown_token_returns_none() {
         let (_dir, store) = temp_store();
         let result = store
-            .validate("bwk_sess_00000000000000000000000000000000")
+            .validate("fcl_sess_00000000000000000000000000000000")
             .unwrap();
         assert!(result.is_none());
     }
@@ -670,7 +670,7 @@ mod tests {
     #[test]
     fn token_format_is_correct() {
         let token = generate_token();
-        assert!(token.starts_with("bwk_sess_"));
+        assert!(token.starts_with("fcl_sess_"));
         assert_eq!(token.len(), 9 + 32);
         // Check that the hex part is valid hex.
         let hex_part = &token[9..];
@@ -685,7 +685,7 @@ mod tests {
         let result = store.validate("bad_token_here").unwrap();
         assert!(
             result.is_none(),
-            "token without bwk_sess_ prefix must be rejected"
+            "token without fcl_sess_ prefix must be rejected"
         );
     }
 
@@ -693,7 +693,7 @@ mod tests {
     fn validate_rejects_wrong_length() {
         let (_dir, store) = temp_store();
         // Correct prefix but wrong length (too short).
-        let result = store.validate("bwk_sess_tooshort").unwrap();
+        let result = store.validate("fcl_sess_tooshort").unwrap();
         assert!(result.is_none(), "token with wrong length must be rejected");
     }
 
@@ -711,7 +711,7 @@ mod tests {
                 description: None,
             })
             .unwrap();
-        // Token has correct format: bwk_sess_ + 32 hex chars = 41 chars.
+        // Token has correct format: fcl_sess_ + 32 hex chars = 41 chars.
         assert_eq!(session.token.len(), 41);
         let result = store.validate(&session.token).unwrap();
         assert!(result.is_some(), "valid token must be accepted");
@@ -752,7 +752,7 @@ mod tests {
     #[test]
     fn hash_token_is_deterministic() {
         let (_dir, store) = temp_store();
-        let token = "bwk_sess_aabbccdd11223344aabbccdd11223344";
+        let token = "fcl_sess_aabbccdd11223344aabbccdd11223344";
         let h1 = store.hash_token(token);
         let h2 = store.hash_token(token);
         assert_eq!(h1, h2, "same token must produce same hash");
@@ -761,8 +761,8 @@ mod tests {
     #[test]
     fn hash_token_differs_for_different_tokens() {
         let (_dir, store) = temp_store();
-        let h1 = store.hash_token("bwk_sess_aabbccdd11223344aabbccdd11223344");
-        let h2 = store.hash_token("bwk_sess_11223344aabbccdd11223344aabbccdd");
+        let h1 = store.hash_token("fcl_sess_aabbccdd11223344aabbccdd11223344");
+        let h2 = store.hash_token("fcl_sess_11223344aabbccdd11223344aabbccdd");
         assert_ne!(h1, h2, "different tokens must produce different hashes");
     }
 
@@ -773,7 +773,7 @@ mod tests {
         let pepper_b = blake3::derive_key("pepper b", b"key-b");
         let store_a = SessionStore::open(&dir.path().join("a.db"), pepper_a).unwrap();
         let store_b = SessionStore::open(&dir.path().join("b.db"), pepper_b).unwrap();
-        let token = "bwk_sess_aabbccdd11223344aabbccdd11223344";
+        let token = "fcl_sess_aabbccdd11223344aabbccdd11223344";
         assert_ne!(
             store_a.hash_token(token),
             store_b.hash_token(token),
@@ -812,7 +812,7 @@ mod tests {
             "raw token must not be stored in database"
         );
         assert!(
-            !stored_hash.starts_with("bwk_sess_"),
+            !stored_hash.starts_with("fcl_sess_"),
             "stored value must be a hash, not a token"
         );
         assert_eq!(stored_hash.len(), 64, "blake3 hash is 64 hex chars");
