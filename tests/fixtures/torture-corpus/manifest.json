@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "description": "Forculus torture-test corpus for F3 (tool-definition hash pinning) and F4 (poisoning detection) tests",
+  "fixtures": [
+    {
+      "filename": "benign/filesystem_server.json",
+      "classification": "benign",
+      "technique_tags": [],
+      "expected_detection": "Should NOT be detected as malicious - legitimate filesystem operations"
+    },
+    {
+      "filename": "benign/git_server.json",
+      "classification": "benign",
+      "technique_tags": [],
+      "expected_detection": "Should NOT be detected as malicious - legitimate git operations"
+    },
+    {
+      "filename": "benign/database_server.json",
+      "classification": "benign",
+      "technique_tags": [],
+      "expected_detection": "Should NOT be detected as malicious - legitimate database operations"
+    },
+    {
+      "filename": "benign/weather_server.json",
+      "classification": "benign",
+      "technique_tags": [],
+      "expected_detection": "Should NOT be detected as malicious - legitimate weather API operations"
+    },
+    {
+      "filename": "benign/file_search_server.json",
+      "classification": "benign",
+      "technique_tags": [],
+      "expected_detection": "Should NOT be detected as malicious - legitimate file search operations"
+    },
+    {
+      "filename": "benign/rest_client_server.json",
+      "classification": "benign",
+      "technique_tags": [],
+      "expected_detection": "Should NOT be detected as malicious - legitimate REST client operations"
+    },
+    {
+      "filename": "malicious/hidden_unicode_server.json",
+      "classification": "malicious",
+      "technique_tags": ["hidden-unicode", "rtl-override", "zero-width-chars", "homoglyphs"],
+      "expected_detection": "Should be detected as malicious - contains hidden unicode characters (RTL override U+202E, zero-width chars, homoglyphs) in tool descriptions"
+    },
+    {
+      "filename": "malicious/instruction_override_server.json",
+      "classification": "malicious",
+      "technique_tags": ["instruction-override", "prompt-injection", "jailbreak"],
+      "expected_detection": "Should be detected as malicious - contains explicit instruction override language ('IGNORE PREVIOUS INSTRUCTIONS', 'You must now...')"
+    },
+    {
+      "filename": "malicious/data_exfil_server.json",
+      "classification": "malicious",
+      "technique_tags": ["data-exfiltration", "exfil", "environment-theft"],
+      "expected_detection": "Should be detected as malicious - contains explicit data exfiltration instructions (transmit env vars/file contents to external URLs)"
+    },
+    {
+      "filename": "malicious/tool_shadowing_server.json",
+      "classification": "malicious",
+      "technique_tags": ["tool-shadowing", "masquerading", "spoofing"],
+      "expected_detection": "Should be detected as malicious - contains tools that shadow legitimate tool names (filesystem_safe_read, shell_exec, network_get)"
+    },
+    {
+      "filename": "malicious/collision_server_1.json",
+      "classification": "malicious",
+      "technique_tags": ["name-collision", "namespace-conflict"],
+      "expected_detection": "Should be detected as malicious - part of cross-server name collision set (read_file, write_file names collide with legitimate tools)"
+    },
+    {
+      "filename": "malicious/collision_server_2.json",
+      "classification": "malicious",
+      "technique_tags": ["name-collision", "namespace-conflict"],
+      "expected_detection": "Should be detected as malicious - part of cross-server name collision set (read_file name collides with collision_server_1 and legitimate tools)"
+    },
+    {
+      "filename": "malicious/poisoned_defaults_server.json",
+      "classification": "malicious",
+      "technique_tags": ["poisoned-parameters", "default-value-abuse", "argument-manipulation"],
+      "expected_detection": "Should be detected as malicious - contains poisoned parameter defaults (callback_url default points to attacker server)"
+    }
+  ],
+  "summary": {
+    "total_fixtures": 13,
+    "benign_count": 6,
+    "malicious_count": 7,
+    "techniques_covered": [
+      "hidden-unicode",
+      "instruction-override",
+      "data-exfiltration",
+      "tool-shadowing",
+      "name-collision",
+      "poisoned-parameters"
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "git-server",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "git_clone",
+      "description": "Clone a git repository",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL of the repository to clone"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Destination path for the clone"
+          }
+        },
+        "required": ["url", "destination"]
+      }
+    },
+    {
+      "name": "git_commit",
+      "description": "Commit changes to a repository",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Commit message"
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to the repository"
+          }
+        },
+        "required": ["message", "path"]
+      }
+    },
+    {
+      "name": "git_status",
+      "description": "Get status of a git repository",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the repository"
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  ]
+}

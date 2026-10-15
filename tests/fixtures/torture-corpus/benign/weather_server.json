@@ -1,0 +1,66 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "weather-server",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "get_current_weather",
+      "description": "Get current weather for a location",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          },
+          "units": {
+            "type": "string",
+            "description": "Temperature units (celsius/fahrenheit)",
+            "default": "celsius"
+          }
+        },
+        "required": ["location"]
+      }
+    },
+    {
+      "name": "get_forecast",
+      "description": "Get weather forecast for days ahead",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          },
+          "days": {
+            "type": "integer",
+            "description": "Number of days to forecast",
+            "minimum": 1,
+            "maximum": 10,
+            "default": 5
+          }
+        },
+        "required": ["location"]
+      }
+    },
+    {
+      "name": "get_alerts",
+      "description": "Get weather alerts for a region",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string",
+            "description": "Region to check for alerts"
+          }
+        },
+        "required": ["region"]
+      }
+    }
+  ]
+}

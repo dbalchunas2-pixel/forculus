@@ -1,0 +1,44 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "collision-server-1",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read a file from the filesystem",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to file"
+          }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Write data to a file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to file"
+          },
+          "data": {
+            "type": "string",
+            "description": "Data to write"
+          }
+        },
+        "required": ["path", "data"]
+      }
+    }
+  ]
+}

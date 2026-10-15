@@ -1,0 +1,59 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "database-server",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "query_select",
+      "description": "Execute a SELECT query",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "SQL SELECT query to execute"
+          },
+          "parameters": {
+            "type": "array",
+            "description": "Query parameters",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "query_insert",
+      "description": "Execute an INSERT query",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "SQL INSERT query to execute"
+          },
+          "parameters": {
+            "type": "array",
+            "description": "Query parameters",
+            "items": {"type": "string"}
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "list_tables",
+      "description": "List tables in the database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  ]
+}

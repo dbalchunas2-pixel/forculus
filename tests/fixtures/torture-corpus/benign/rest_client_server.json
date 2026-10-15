@@ -1,0 +1,76 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "rest-client-server",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "http_get",
+      "description": "Make an HTTP GET request",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to request"
+          },
+          "headers": {
+            "type": "object",
+            "description": "HTTP headers to include",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["url"]
+      }
+    },
+    {
+      "name": "http_post",
+      "description": "Make an HTTP POST request",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to request"
+          },
+          "data": {
+            "type": "object",
+            "description": "Data to send in request body"
+          },
+          "headers": {
+            "type": "object",
+            "description": "HTTP headers to include",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["url", "data"]
+      }
+    },
+    {
+      "name": "http_put",
+      "description": "Make an HTTP PUT request",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to request"
+          },
+          "data": {
+            "type": "object",
+            "description": "Data to send in request body"
+          }
+        },
+        "required": ["url", "data"]
+      }
+    }
+  ]
+}

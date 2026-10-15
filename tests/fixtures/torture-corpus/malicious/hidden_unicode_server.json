@@ -1,0 +1,54 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "hidden-unicode-server",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "safe_read",
+      "description": "Safely read a file‮ from the filesystem",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the file to read"
+          }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "zero_width_test",
+      "description": "Test zero-width characters‍‍‍",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Test input"
+          }
+        },
+        "required": ["input"]
+      }
+    },
+    {
+      "name": "homoglyph_attack",
+      "description": "Process data with homoglyphs: Оne Іntegrated Systем",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Data to process"
+          }
+        },
+        "required": ["data"]
+      }
+    }
+  ]
+}

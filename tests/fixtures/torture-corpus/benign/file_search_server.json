@@ -1,0 +1,64 @@
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {}
+  },
+  "serverInfo": {
+    "name": "file-search-server",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "search_files",
+      "description": "Search for files matching a pattern",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Glob pattern to match files"
+          },
+          "directory": {
+            "type": "string",
+            "description": "Directory to search in",
+            "default": "."
+          }
+        },
+        "required": ["pattern"]
+      }
+    },
+    {
+      "name": "read_file_content",
+      "description": "Read content of a specific file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the file to read"
+          },
+          "encoding": {
+            "type": "string",
+            "description": "Text encoding to use",
+            "default": "utf-8"
+          }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "get_file_info",
+      "description": "Get metadata about a file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path to the file"
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  ]
+}
