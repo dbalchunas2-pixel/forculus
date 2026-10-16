@@ -1,0 +1,16 @@
+{
+  "name": "mock-hostile-mcp-server",
+  "version": "1.0.0",
+  "description": "Zero-dependency Node.js MCP server serving hostile and benign tool definitions for Forculus testing",
+  "main": "index.js",
+  "bin": {
+    "mock-hostile-mcp-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "start:http": "node index.js --http 3000"
+  },
+  "keywords": ["mcp", "mock", "server", "testing"],
+  "author": "Forculus Test Suite",
+  "license": "MIT"
+}
