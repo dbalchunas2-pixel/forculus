@@ -33,6 +33,7 @@ use crate::context::ProxyRequestContext;
 use crate::error_response;
 use crate::forward::BoxBody;
 use crate::logging::RequestLog;
+use crate::pincheck;
 use crate::tls::TlsState;
 
 /// Handle a CONNECT request: upgrade the connection, perform TLS MITM, and
@@ -445,6 +446,14 @@ async fn forward_tls_request(
     };
     let request_bytes = body_bytes.len() as u64;
 
+    // F3: detect MCP tools/list requests before body_bytes is consumed.
+    let mcp_tools_list = ctx.pin_store.is_some() && pincheck::is_tools_list_request(&body_bytes);
+    let mcp_req_id: Option<serde_json::Value> = if mcp_tools_list {
+        pincheck::request_id(&body_bytes)
+    } else {
+        None
+    };
+
     // Inspect request body if scanner is configured and request inspection is enabled.
     let mut inspection_info: Option<forculus_audit::event::InspectionInfo> = None;
     let body_bytes = if let Some(scanner) = ctx
@@ -712,6 +721,34 @@ async fn forward_tls_request(
             } else {
                 resp_bytes
             };
+
+            // F3: verify tool-definition pins on MCP tools/list responses.
+            if let (Some(pin_store), true) = (&ctx.pin_store, mcp_tools_list) {
+                if let Some(tools) = pincheck::parse_tools_list(&resp_bytes) {
+                    if let Err(msg) = pincheck::verify_tools_list(
+                        pin_store,
+                        forculus_audit::event::Channel::HttpsProxy,
+                        &host,
+                        &tools,
+                        ctx.audit_logger.as_ref(),
+                        audit_session.as_ref(),
+                        &resolved_tool,
+                        &resolved_action,
+                        &url,
+                        start.elapsed().as_micros() as u64,
+                    ) {
+                        tracing::warn!(host = %host, %msg, "blocking MCP tools/list response");
+                        let err_body =
+                            pincheck::pin_violation_error_body(mcp_req_id.as_ref(), &msg);
+                        let resp = Response::builder()
+                            .status(403)
+                            .header("content-type", "application/json")
+                            .body(Full::new(err_body).map_err(|never| match never {}).boxed())
+                            .expect("valid pin violation response");
+                        return Ok(resp);
+                    }
+                }
+            }
 
             let response_bytes = resp_bytes.len() as u64;
 

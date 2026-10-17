@@ -99,6 +99,15 @@ impl ProxyServer {
         self
     }
 
+    /// Attach a tool-definition pin store (F3).
+    pub fn with_pin_store(
+        mut self,
+        store: Arc<parking_lot::Mutex<crate::pins::PinStore>>,
+    ) -> Self {
+        self.ctx.pin_store = Some(store);
+        self
+    }
+
     /// Attach TLS passthrough patterns (hosts that bypass TLS MITM).
     pub fn with_tls_passthrough(mut self, patterns: Vec<GlobPattern>) -> Self {
         self.ctx.tls_passthrough = Some(Arc::new(patterns));
