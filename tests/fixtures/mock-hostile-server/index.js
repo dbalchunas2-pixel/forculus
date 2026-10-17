@@ -15,23 +15,23 @@ function loadFixture(filepath) {
   return JSON.parse(content);
 }
 
-// Load all benign fixtures
-const benignDir = path.join(fixturesDir, 'benign');
-fs.readdirSync(benignDir).forEach(file => {
-  if (file.endsWith('.json')) {
-    const fixture = loadFixture(path.join(benignDir, file));
-    fixtures[fixture.serverInfo.name] = fixture;
-  }
-});
+// Load fixtures. `--only benign` / `--only malicious` restricts which
+// corpus half is served so tests can run a clean or hostile instance.
+const onlyIdx = process.argv.indexOf('--only');
+const only = onlyIdx !== -1 ? process.argv[onlyIdx + 1] : null;
 
-// Load all malicious fixtures
-const maliciousDir = path.join(fixturesDir, 'malicious');
-fs.readdirSync(maliciousDir).forEach(file => {
-  if (file.endsWith('.json')) {
-    const fixture = loadFixture(path.join(maliciousDir, file));
-    fixtures[fixture.serverInfo.name] = fixture;
-  }
-});
+function loadDir(dir) {
+  const full = path.join(fixturesDir, dir);
+  fs.readdirSync(full).forEach(file => {
+    if (file.endsWith('.json')) {
+      const fixture = loadFixture(path.join(full, file));
+      fixtures[fixture.serverInfo.name] = fixture;
+    }
+  });
+}
+
+if (!only || only === 'benign') loadDir('benign');
+if (!only || only === 'malicious') loadDir('malicious');
 
 // MCP Server implementation
 class MockMCPServer {
@@ -77,15 +77,22 @@ class MockMCPServer {
             result = { tools: allTools };
             break;
 
-          case 'tools/call':
-            // For simplicity, just acknowledge the call
+          case 'tools/call': {
+            // Return the tool's actual fixture description so response
+            // inspection sees the same payload the tool list advertised.
+            const toolName = parsed.params && parsed.params.name;
+            let text = `Tool ${toolName} called successfully`;
+            for (const fixture of Object.values(this.fixtures)) {
+              if (fixture.tools) {
+                const t = fixture.tools.find(t => t.name === toolName);
+                if (t) { text = t.description; break; }
+              }
+            }
             result = {
-              content: [{
-                type: 'text',
-                text: `Tool ${parsed.params.name} called successfully`
-              }]
+              content: [{ type: 'text', text }]
             };
             break;
+          }
 
           default:
             result = { error: { code: -32601, message: 'Method not found' } };

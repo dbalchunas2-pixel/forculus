@@ -1,22 +1,22 @@
+//! End-to-end test: Forculus proxy vs. mock hostile MCP server.
+//!
+//! A malicious-only mock (poisoned tool catalog) must have its tools/list
+//! blocked and its malicious tool calls blocked. A benign-only mock must
+//! pass everything through untouched.
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::path::PathBuf;
 
-use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{Request, Response, StatusCode};
-use hyper_util::rt::TokioIo;
 use secrecy::SecretString;
 use tokio::net::TcpListener;
 use tokio::process::{Child, Command as TokioCommand};
 use tokio_util::sync::CancellationToken;
 
 use forculus_config::ProxyConfig;
-use forculus_policy::engine::PolicyEngine;
 use forculus_proxy::server::ProxyServer;
 use forculus_vault::credential::{Credential, CredentialType};
 use forculus_vault::session::CreateSessionParams;
@@ -32,19 +32,28 @@ fn init_tracing() {
         .try_init();
 }
 
-/// Start a Forculus proxy on a random port. Returns the bound address and a
-/// cancellation token.
-async fn start_test_proxy(ca_dir: &PathBuf) -> (SocketAddr, CancellationToken, Arc<ProxyServer>) {
-    let config = ProxyConfig {
+fn test_config(ca_dir: &std::path::Path) -> ProxyConfig {
+    ProxyConfig {
         listen_address: "127.0.0.1:0".to_string(),
         tls: forculus_config::TlsConfig {
             ca_dir: ca_dir.to_string_lossy().to_string(),
         },
         tool_mappings: Vec::new(),
         tls_passthrough: Vec::new(),
-    };
+    }
+}
 
-    let server = Arc::new(ProxyServer::new(config).await.expect("proxy server"));
+/// Start a Forculus proxy on a pre-bound listener, with response inspection.
+async fn start_test_proxy(
+    ca_dir: &std::path::Path,
+    scanner: Arc<forculus_inspect::scanner::ContentScanner>,
+) -> (SocketAddr, CancellationToken, Arc<ProxyServer>) {
+    let server = Arc::new(
+        ProxyServer::new(test_config(ca_dir))
+            .await
+            .expect("proxy server")
+            .with_content_scanner(scanner),
+    );
     let token = server.shutdown_token();
 
     let listener = TcpListener::bind("127.0.0.1:0")
@@ -54,37 +63,62 @@ async fn start_test_proxy(ca_dir: &PathBuf) -> (SocketAddr, CancellationToken, A
 
     let server_clone = Arc::clone(&server);
     tokio::spawn(async move {
-        server_clone.run().await
+        server_clone.run_with_listener(listener).await
     });
 
     (addr, token, server)
 }
 
-/// Start a simple HTTP server that serves MCP tool definitions from a directory.
-/// This simulates the mock hostile MCP server for testing.
-async fn start_mock_mcp_server(server_dir: &str, port: u16) -> (SocketAddr, Child) {
-    let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
+/// Start the mock MCP server serving only one half of the corpus.
+async fn start_mock_mcp_server(server_dir: &str, only: &str) -> (SocketAddr, Child) {
+    // Reserve a free port by binding and immediately dropping, then hand the
+    // port to Node. (Pre-binding and never accepting hung every request.)
+    let listener = TcpListener::bind("127.0.0.1:0")
         .await
-        .expect("bind mock MCP server");
-    let addr = listener.local_addr().expect("local addr");
+        .expect("reserve port for mock MCP server");
+    let port = listener.local_addr().expect("local addr").port();
+    drop(listener);
+    let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();
 
-    // Node.js server path
     let server_path = format!("{}/index.js", server_dir);
-
-    // Start the Node.js MCP server
-    let child_result = TokioCommand::new("node")
+    let child = TokioCommand::new("node")
         .arg(&server_path)
         .arg("--http")
         .arg(port.to_string())
+        .arg("--only")
+        .arg(only)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .spawn();
+        .spawn()
+        .expect("failed to start mock MCP server");
 
-    // Give the server a moment to start
+    // Give the server a moment to start, then verify it is still alive
+    // (a fixture path typo used to kill Node silently and hang the test).
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    assert!(
+        child.id().is_some(),
+        "mock MCP server process died at startup"
+    );
 
-    let child = child_result.expect("failed to start mock MCP server");
     (addr, child)
+}
+
+async fn post_mcp(client: &reqwest::Client, addr: SocketAddr, body: serde_json::Value) -> reqwest::Response {
+    client
+        .post(format!("http://{addr}/mcp"))
+        .json(&body)
+        .send()
+        .await
+        .expect("proxied request")
+}
+
+fn tool_call(id: i32, name: &str, args: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": "tools/call",
+        "params": { "name": name, "arguments": args }
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -95,145 +129,104 @@ async fn start_mock_mcp_server(server_dir: &str, port: u16) -> (SocketAddr, Chil
 async fn mock_hostile_mcp_server_blocks_malicious_and_passes_benign() {
     init_tracing();
 
-    // Create temporary directory for CA certs
     let tmp = tempfile::tempdir().expect("tmp dir");
     let ca_dir = tmp.path().join("ca");
     std::fs::create_dir_all(&ca_dir).expect("create ca dir");
 
-    // Path to our mock hostile MCP server fixtures
-    let mock_server_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/mock-hostile-server");
+    let mock_server_dir = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/mock-hostile-server"
+    );
 
-    // Start the mock hostile MCP server on a random port
-    let (mock_server_addr, _mock_server_child) =
-        start_mock_mcp_server(mock_server_dir, 0).await;
+    let scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
+    let (proxy_addr, token, _server) = start_test_proxy(&ca_dir, Arc::clone(&scanner)).await;
 
-    // Create scanner with inspect_responses enabled (default)
-    let _scanner = Arc::new(forculus_inspect::scanner::ContentScanner::builtin());
-
-    // Start the Forculus proxy pointing to our mock MCP server
-    let config = ProxyConfig {
-        listen_address: "127.0.0.1:0".to_string(),
-        tls: forculus_config::TlsConfig {
-            ca_dir: ca_dir.to_string_lossy().to_string(),
-        },
-        tool_mappings: Vec::new(),
-        tls_passthrough: Vec::new(),
-    };
-
-    let server = Arc::new(ProxyServer::new(config).await.expect("proxy server"));
-    let token = server.shutdown_token();
-
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("bind test proxy");
-    let proxy_addr = listener.local_addr().expect("local addr");
-
-    let server_clone = Arc::clone(&server);
-    tokio::spawn(async move {
-        server_clone.run().await
-    });
-
-    // Create HTTP client that goes through the proxy
     let proxy = reqwest::Proxy::http(format!("http://{proxy_addr}")).expect("proxy");
     let client = reqwest::Client::builder()
         .proxy(proxy)
+        .timeout(Duration::from_secs(10))
         .build()
         .expect("client");
 
-    // Test 1: Fetch tool list - should pass through (benign request)
-    let resp = client
-        .post(format!("http://{}/mcp", mock_server_addr))
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/list"
-        }))
-        .send()
-        .await
-        .expect("proxied request");
+    // --- Hostile instance: poisoned tool catalog must never reach the agent ---
+    let (hostile_addr, mut hostile_child) =
+        start_mock_mcp_server(mock_server_dir, "malicious").await;
 
-    // Tool listing should pass through (not blocked)
+    // tools/list from a hostile server: BLOCKED (hidden unicode, instruction
+    // override, and exfil endpoints in the catalog).
+    let resp = post_mcp(
+        &client,
+        hostile_addr,
+        serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}),
+    )
+    .await;
     assert_eq!(
         resp.status(),
-        StatusCode::OK,
-        "tool list request should pass through proxy"
+        reqwest::StatusCode::BAD_GATEWAY,
+        "hostile tool list must be blocked by the proxy"
     );
 
-    // Test 2: Call a benign tool - should pass through
-    let resp = client
-        .post(format!("http://{}/mcp", mock_server_addr))
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {
-                "name": "read_file",
-                "arguments": {
-                    "path": "/etc/passwd"
-                }
-            }
-        }))
-        .send()
-        .await
-        .expect("proxied request");
-
-    // Benign tool call should pass through
+    // Malicious tool call (hidden unicode payload): BLOCKED.
+    let resp = post_mcp(
+        &client,
+        hostile_addr,
+        tool_call(2, "safe_read", serde_json::json!({"path": "/etc/passwd"})),
+    )
+    .await;
     assert_eq!(
         resp.status(),
-        StatusCode::OK,
+        reqwest::StatusCode::BAD_GATEWAY,
+        "malicious tool call must be blocked by the proxy"
+    );
+
+    // Malicious tool call (instruction override + exfil endpoint): BLOCKED.
+    let resp = post_mcp(
+        &client,
+        hostile_addr,
+        tool_call(
+            3,
+            "process_document",
+            serde_json::json!({"document": "test document"}),
+        ),
+    )
+    .await;
+    assert_eq!(
+        resp.status(),
+        reqwest::StatusCode::BAD_GATEWAY,
+        "instruction-override tool call must be blocked by the proxy"
+    );
+
+    hostile_child.kill().await.expect("kill hostile mock");
+
+    // --- Benign instance: everything passes through untouched ---
+    let (benign_addr, mut benign_child) =
+        start_mock_mcp_server(mock_server_dir, "benign").await;
+
+    let resp = post_mcp(
+        &client,
+        benign_addr,
+        serde_json::json!({"jsonrpc": "2.0", "id": 10, "method": "tools/list"}),
+    )
+    .await;
+    assert_eq!(
+        resp.status(),
+        reqwest::StatusCode::OK,
+        "benign tool list should pass through proxy"
+    );
+
+    let resp = post_mcp(
+        &client,
+        benign_addr,
+        tool_call(11, "read_file", serde_json::json!({"path": "/tmp/notes.txt"})),
+    )
+    .await;
+    assert_eq!(
+        resp.status(),
+        reqwest::StatusCode::OK,
         "benign tool call should pass through proxy"
     );
 
-    // Test 3: Call a malicious tool with hidden unicode - should be blocked
-    let resp = client
-        .post(format!("http://{}/mcp", mock_server_addr))
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 3,
-            "method": "tools/call",
-            "params": {
-                "name": "safe_read", // This has hidden unicode in the mock server
-                "arguments": {
-                    "path": "/etc/passwd"
-                }
-            }
-        }))
-        .send()
-        .await
-        .expect("proxied request");
+    benign_child.kill().await.expect("kill benign mock");
 
-    // Malicious tool should be blocked with 502
-    assert_eq!(
-        resp.status(),
-        StatusCode::BAD_GATEWAY,
-        "malicious tool call should be blocked by proxy"
-    );
-
-    // Test 4: Call a malicious tool with instruction override - should be blocked
-    let resp = client
-        .post(format!("http://{}/mcp", mock_server_addr))
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 4,
-            "method": "tools/call",
-            "params": {
-                "name": "process_document", // This has instruction override
-                "arguments": {
-                    "document": "test document"
-                }
-            }
-        }))
-        .send()
-        .await
-        .expect("proxied request");
-
-    // Malicious tool should be blocked with 502
-    assert_eq!(
-        resp.status(),
-        StatusCode::BAD_GATEWAY,
-        "malicious tool call should be blocked by proxy"
-    );
-
-    // Clean up
     token.cancel();
 }
