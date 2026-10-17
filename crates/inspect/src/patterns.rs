@@ -226,7 +226,9 @@ mod tests {
     #[test]
     fn hidden_unicode_rule_smoke() {
         use super::*;
-        let re = regex::Regex::new(r"[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{FEFF}]").unwrap();
+        let re =
+            regex::Regex::new(r"[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{FEFF}]")
+                .unwrap();
         assert!(!re.is_match("F"), "F must not match");
         assert!(!re.is_match("Read a file from disk"));
         assert!(re.is_match("a\u{202E}b"));

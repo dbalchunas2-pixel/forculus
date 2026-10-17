@@ -5,10 +5,10 @@
 //! pass everything through untouched.
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
-use std::process::Stdio;
-use std::path::PathBuf;
 
 use http_body_util::{BodyExt, Full};
 use secrecy::SecretString;
@@ -62,9 +62,7 @@ async fn start_test_proxy(
     let addr = listener.local_addr().expect("local addr");
 
     let server_clone = Arc::clone(&server);
-    tokio::spawn(async move {
-        server_clone.run_with_listener(listener).await
-    });
+    tokio::spawn(async move { server_clone.run_with_listener(listener).await });
 
     (addr, token, server)
 }
@@ -103,7 +101,11 @@ async fn start_mock_mcp_server(server_dir: &str, only: &str) -> (SocketAddr, Chi
     (addr, child)
 }
 
-async fn post_mcp(client: &reqwest::Client, addr: SocketAddr, body: serde_json::Value) -> reqwest::Response {
+async fn post_mcp(
+    client: &reqwest::Client,
+    addr: SocketAddr,
+    body: serde_json::Value,
+) -> reqwest::Response {
     client
         .post(format!("http://{addr}/mcp"))
         .json(&body)
@@ -199,8 +201,7 @@ async fn mock_hostile_mcp_server_blocks_malicious_and_passes_benign() {
     hostile_child.kill().await.expect("kill hostile mock");
 
     // --- Benign instance: everything passes through untouched ---
-    let (benign_addr, mut benign_child) =
-        start_mock_mcp_server(mock_server_dir, "benign").await;
+    let (benign_addr, mut benign_child) = start_mock_mcp_server(mock_server_dir, "benign").await;
 
     let resp = post_mcp(
         &client,
@@ -217,7 +218,11 @@ async fn mock_hostile_mcp_server_blocks_malicious_and_passes_benign() {
     let resp = post_mcp(
         &client,
         benign_addr,
-        tool_call(11, "read_file", serde_json::json!({"path": "/tmp/notes.txt"})),
+        tool_call(
+            11,
+            "read_file",
+            serde_json::json!({"path": "/tmp/notes.txt"}),
+        ),
     )
     .await;
     assert_eq!(

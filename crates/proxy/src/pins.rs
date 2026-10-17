@@ -95,7 +95,10 @@ impl PinStore {
             canonical_json(&t.input_schema)
         );
         let digest = Sha256::digest(canonical.as_bytes());
-        digest.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+        digest
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
     }
 
     pub fn verify(&mut self, server: &str, tools: &[ToolDef]) -> PinVerdict {
@@ -176,7 +179,10 @@ mod tests {
     fn round_trip() {
         let path = tmp_path();
         let mut store = PinStore::load(path.clone()).expect("load failed");
-        assert_eq!(store.verify("srv", &[tool("a", "x")]), PinVerdict::NewServer);
+        assert_eq!(
+            store.verify("srv", &[tool("a", "x")]),
+            PinVerdict::NewServer
+        );
         let loaded = PinStore::load(path.clone()).expect("reload failed");
         assert_eq!(store.pins, loaded.pins);
         let _ = std::fs::remove_file(&path);
@@ -220,7 +226,10 @@ mod tests {
         assert_eq!(store.verify("s1", &[tool("a", "x")]), PinVerdict::Pinned);
         assert_eq!(store.verify("s2", &[tool("a", "x")]), PinVerdict::Pinned);
         // s1 changed, s2 unaffected.
-        assert_eq!(store.verify("s1", &[tool("a", "evil")]), PinVerdict::Changed(vec!["a".into()]));
+        assert_eq!(
+            store.verify("s1", &[tool("a", "evil")]),
+            PinVerdict::Changed(vec!["a".into()])
+        );
         assert_eq!(store.verify("s2", &[tool("a", "x")]), PinVerdict::Pinned);
         let _ = std::fs::remove_file(&path);
     }
