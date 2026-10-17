@@ -183,6 +183,15 @@ pub fn builtin_patterns() -> Vec<PatternMatcher> {
         .unwrap(),
         // === Prompt Injection ===
         PatternMatcher::new(
+            "hidden-unicode",
+            "Hidden or bidirectional Unicode characters (tool poisoning / prompt smuggling)",
+            r"[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{FEFF}]",
+            Severity::High,
+            FindingCategory::PromptInjection,
+            FindingAction::Block,
+        )
+        .unwrap(),
+        PatternMatcher::new(
             "prompt-injection-ignore",
             "Prompt injection: ignore previous instructions",
             r"(?i)(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above|earlier)\s+(?:instructions|prompts|rules|directions)",
@@ -214,6 +223,15 @@ pub fn builtin_patterns() -> Vec<PatternMatcher> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn hidden_unicode_rule_smoke() {
+        use super::*;
+        let re = regex::Regex::new(r"[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{FEFF}]").unwrap();
+        assert!(!re.is_match("F"), "F must not match");
+        assert!(!re.is_match("Read a file from disk"));
+        assert!(re.is_match("a\u{202E}b"));
+        assert!(re.is_match("hi\u{200B}there"));
+    }
     use super::*;
 
     #[test]

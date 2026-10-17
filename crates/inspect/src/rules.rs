@@ -112,8 +112,8 @@ mod tests {
     #[test]
     fn builtin_creates_expected_rules() {
         let set = InspectionRuleSet::builtin();
-        assert_eq!(set.rule_count(), 13);
-        assert_eq!(set.enabled_count(), 13);
+        assert_eq!(set.rule_count(), 14);
+        assert_eq!(set.enabled_count(), 14);
     }
 
     #[test]
@@ -123,7 +123,7 @@ mod tests {
             ..Default::default()
         };
         let set = InspectionRuleSet::from_config(&config).unwrap();
-        assert_eq!(set.enabled_count(), 11);
+        assert_eq!(set.enabled_count(), 12);
         assert!(!set.get_rule("email-address").unwrap().enabled);
         assert!(!set.get_rule("us-phone").unwrap().enabled);
         assert!(set.get_rule("aws-access-key").unwrap().enabled);
@@ -159,7 +159,7 @@ mod tests {
             ..Default::default()
         };
         let set = InspectionRuleSet::from_config(&config).unwrap();
-        assert_eq!(set.rule_count(), 14); // 13 builtin + 1 custom
+        assert_eq!(set.rule_count(), 15); // 14 builtin + 1 custom
         let custom = set.get_rule("internal-code").unwrap();
         assert!(custom.enabled);
         assert_eq!(custom.matcher.severity, Severity::Medium);
@@ -172,7 +172,7 @@ mod tests {
             ..Default::default()
         };
         let set = InspectionRuleSet::from_config(&config).unwrap();
-        assert_eq!(set.rule_count(), 13);
-        assert_eq!(set.enabled_count(), 12);
+        assert_eq!(set.rule_count(), 14);
+        assert_eq!(set.enabled_count(), 13);
     }
 }
