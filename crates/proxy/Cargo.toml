@@ -8,6 +8,7 @@ description = "Forculus HTTP/HTTPS forward proxy core"
 
 [dependencies]
 forculus-common.workspace = true
+forculus-toolguard.workspace = true
 forculus-config.workspace = true
 forculus-policy.workspace = true
 forculus-vault.workspace = true

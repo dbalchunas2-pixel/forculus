@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/proxy",
+    "crates/toolguard",
     "crates/config",
     "crates/common",
     "crates/cli",
@@ -24,6 +25,7 @@ rust-version = "1.85"
 [workspace.dependencies]
 # Internal crates
 forculus-common = { path = "crates/common" }
+forculus-toolguard = { path = "crates/toolguard" }
 forculus-config = { path = "crates/config" }
 forculus-proxy = { path = "crates/proxy" }
 forculus-mcp = { path = "crates/mcp" }

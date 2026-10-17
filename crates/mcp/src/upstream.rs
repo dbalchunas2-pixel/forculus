@@ -1,6 +1,7 @@
 //! Upstream MCP server lifecycle — spawn, handshake, health, restart.
 
 use std::process::Stdio;
+use std::sync::Arc;
 
 use forculus_common::ForculusError;
 use forculus_config::{UpstreamServerConfig, resolve_env_vars};
@@ -31,11 +32,16 @@ pub struct UpstreamServer {
     transport: Option<StdioTransport<ChildStdout, ChildStdin>>,
     tools: Vec<Tool>,
     next_request_id: i64,
+    /// F3: optional tool-definition pin store; `None` disables verification.
+    pin_store: Option<Arc<parking_lot::Mutex<forculus_toolguard::pins::PinStore>>>,
 }
 
 impl UpstreamServer {
     /// Create and start an upstream server from config.
-    pub async fn new(config: UpstreamServerConfig) -> forculus_common::Result<Self> {
+    pub async fn new(
+        config: UpstreamServerConfig,
+        pin_store: Option<Arc<parking_lot::Mutex<forculus_toolguard::pins::PinStore>>>,
+    ) -> forculus_common::Result<Self> {
         let name = config.name.clone();
         let mut server = Self {
             name,
@@ -45,6 +51,7 @@ impl UpstreamServer {
             transport: None,
             tools: Vec::new(),
             next_request_id: 1,
+            pin_store,
         };
         server.start().await?;
         Ok(server)
@@ -68,6 +75,7 @@ impl UpstreamServer {
             transport: Some(transport),
             tools: Vec::new(),
             next_request_id: 1,
+            pin_store: None,
         }
     }
 
@@ -124,6 +132,38 @@ impl UpstreamServer {
 
         // Discover tools.
         self.tools = client::list_tools(&mut transport, &mut self.next_request_id).await?;
+
+        // F3: verify tool-definition pins before this server's tools may be
+        // served. A mismatched catalog fails the server; it is never served.
+        if let Some(store) = &self.pin_store {
+            let defs: Vec<forculus_toolguard::pins::ToolDef> = self
+                .tools
+                .iter()
+                .map(|t| forculus_toolguard::pins::ToolDef {
+                    name: t.name.clone(),
+                    description: t.description.clone().unwrap_or_default(),
+                    input_schema: t.input_schema.clone(),
+                })
+                .collect();
+            let mut pinned = store.lock();
+            match pinned.verify(&self.name, &defs) {
+                forculus_toolguard::pins::PinVerdict::Pinned
+                | forculus_toolguard::pins::PinVerdict::NewServer => {}
+                forculus_toolguard::pins::PinVerdict::Changed(names) => {
+                    tracing::error!(
+                        server = %self.name,
+                        changed = ?names,
+                        "TOOL PIN VIOLATION: server tool definitions changed; blocking server"
+                    );
+                    return Err(ForculusError::Mcp(format!(
+                        "tool pin violation on server {}: changed tools: {}",
+                        self.name,
+                        names.join(", ")
+                    )));
+                }
+            }
+        }
+
         tracing::info!(
             server = %self.name,
             tool_count = self.tools.len(),

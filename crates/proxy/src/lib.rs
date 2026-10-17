@@ -11,7 +11,7 @@ pub mod forward;
 pub mod handler;
 pub mod logging;
 pub mod pincheck;
-pub mod pins;
+pub use forculus_toolguard::pins;
 pub mod server;
 pub mod tls;
 pub mod toolmap;

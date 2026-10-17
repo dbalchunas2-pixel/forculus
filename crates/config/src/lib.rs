@@ -178,6 +178,9 @@ pub struct McpGatewayConfig {
     /// Allowed origins for DNS rebinding protection. Empty = allow all.
     #[serde(default)]
     pub allowed_origins: Vec<String>,
+    /// Path to the tool-definition pin database (F3). `None` disables pinning.
+    #[serde(default)]
+    pub pins_db_path: Option<String>,
 }
 
 /// Configuration for a single upstream MCP tool server.

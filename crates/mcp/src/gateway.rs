@@ -45,14 +45,46 @@ pub struct McpGateway {
 
 impl McpGateway {
     /// Create the gateway and start all upstream servers.
+    ///
+    /// Fail-soft: a server that fails to start (including a tool-pin
+    /// violation) is skipped with an error log; the gateway still comes up
+    /// serving the healthy upstreams.
     pub async fn new(config: McpGatewayConfig) -> forculus_common::Result<Self> {
+        // F3: load the pin store once if a pins database is configured.
+        let pin_store: Option<Arc<parking_lot::Mutex<forculus_toolguard::pins::PinStore>>> =
+            match &config.pins_db_path {
+                Some(path) => {
+                    let expanded = forculus_config::expand_tilde(path);
+                    match forculus_toolguard::pins::PinStore::load(std::path::PathBuf::from(
+                        &expanded,
+                    )) {
+                        Ok(store) => Some(Arc::new(parking_lot::Mutex::new(store))),
+                        Err(e) => {
+                            tracing::error!(path = %expanded, error = %e, "failed to load pin store; pinning disabled");
+                            None
+                        }
+                    }
+                }
+                None => None,
+            };
+
         let mut upstreams = HashMap::new();
         for server_config in &config.upstream_servers {
-            let server = UpstreamServer::new(server_config.clone()).await?;
-            upstreams.insert(
-                server_config.name.clone(),
-                Arc::new(tokio::sync::Mutex::new(server)),
-            );
+            match UpstreamServer::new(server_config.clone(), pin_store.clone()).await {
+                Ok(server) => {
+                    upstreams.insert(
+                        server_config.name.clone(),
+                        Arc::new(tokio::sync::Mutex::new(server)),
+                    );
+                }
+                Err(e) => {
+                    tracing::error!(
+                        server = %server_config.name,
+                        error = %e,
+                        "upstream server failed to start; skipping (fail-soft)"
+                    );
+                }
+            }
         }
         Ok(Self {
             upstreams,
