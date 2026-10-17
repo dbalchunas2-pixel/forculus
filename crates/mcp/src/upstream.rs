@@ -34,6 +34,9 @@ pub struct UpstreamServer {
     next_request_id: i64,
     /// F3: optional tool-definition pin store; `None` disables verification.
     pin_store: Option<Arc<parking_lot::Mutex<forculus_toolguard::pins::PinStore>>>,
+    /// HTTP upstream transport (remote Streamable HTTP); mutually exclusive
+    /// with `transport`.
+    http: Option<crate::http::HttpUpstream>,
 }
 
 impl UpstreamServer {
@@ -49,6 +52,7 @@ impl UpstreamServer {
             status: ServerStatus::Stopped,
             process: None,
             transport: None,
+            http: None,
             tools: Vec::new(),
             next_request_id: 1,
             pin_store,
@@ -66,6 +70,7 @@ impl UpstreamServer {
             name,
             config: UpstreamServerConfig {
                 name: String::new(),
+                url: None,
                 command: String::new(),
                 args: Vec::new(),
                 env: Default::default(),
@@ -76,11 +81,15 @@ impl UpstreamServer {
             tools: Vec::new(),
             next_request_id: 1,
             pin_store: None,
+            http: None,
         }
     }
 
     /// Start (or restart) the upstream server process.
     pub async fn start(&mut self) -> forculus_common::Result<()> {
+        if let Some(url) = self.config.url.clone() {
+            return self.start_http(url).await;
+        }
         self.status = ServerStatus::Starting;
         tracing::info!(server = %self.name, command = %self.config.command, "starting upstream server");
 
@@ -135,6 +144,22 @@ impl UpstreamServer {
 
         // F3: verify tool-definition pins before this server's tools may be
         // served. A mismatched catalog fails the server; it is never served.
+        self.verify_pins()?;
+
+        tracing::info!(
+            server = %self.name,
+            tool_count = self.tools.len(),
+            "upstream server ready"
+        );
+
+        self.transport = Some(transport);
+        self.status = ServerStatus::Ready;
+        Ok(())
+    }
+
+    /// F3: verify this server's current tool definitions against the pin
+    /// store. Shared by the stdio and HTTP transports.
+    fn verify_pins(&self) -> forculus_common::Result<()> {
         if let Some(store) = &self.pin_store {
             let defs: Vec<forculus_toolguard::pins::ToolDef> = self
                 .tools
@@ -163,15 +188,23 @@ impl UpstreamServer {
                 }
             }
         }
+        Ok(())
+    }
 
+    /// Start an upstream server reached over remote Streamable HTTP.
+    async fn start_http(&mut self, url: String) -> forculus_common::Result<()> {
+        let mut http = crate::http::HttpUpstream::new(url)?;
+        let mut id: i64 = 0;
+        http.initialize(&mut id).await?;
+        self.tools = http.list_tools(&mut id).await?;
+        self.verify_pins()?;
+        self.http = Some(http);
+        self.status = ServerStatus::Ready;
         tracing::info!(
             server = %self.name,
             tool_count = self.tools.len(),
             "upstream server ready"
         );
-
-        self.transport = Some(transport);
-        self.status = ServerStatus::Ready;
         Ok(())
     }
 
@@ -179,6 +212,7 @@ impl UpstreamServer {
     pub async fn stop(&mut self) {
         tracing::info!(server = %self.name, "stopping upstream server");
         self.transport = None;
+        self.http = None;
         if let Some(ref mut child) = self.process {
             let _ = child.kill().await;
             let _ = child.wait().await;
@@ -193,6 +227,14 @@ impl UpstreamServer {
         name: &str,
         arguments: Option<serde_json::Value>,
     ) -> forculus_common::Result<ToolCallResult> {
+        if let Some(http) = self.http.as_mut() {
+            let mut id = self.next_request_id;
+            let result = http
+                .call_tool(&mut id, name, arguments.unwrap_or(serde_json::Value::Null))
+                .await;
+            self.next_request_id = id;
+            return result;
+        }
         let transport = self
             .transport
             .as_mut()

@@ -7,6 +7,7 @@
 
 pub mod client;
 pub mod gateway;
+pub mod http;
 pub mod governance;
 pub mod logging;
 pub mod server;

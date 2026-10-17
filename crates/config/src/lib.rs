@@ -188,6 +188,10 @@ pub struct McpGatewayConfig {
 pub struct UpstreamServerConfig {
     /// Logical name used for tool namespacing.
     pub name: String,
+    /// Optional remote URL (Streamable HTTP). When set, command/args/env are
+    /// ignored and the server is reached over HTTP instead of a spawned child.
+    #[serde(default)]
+    pub url: Option<String>,
     /// Command to spawn (e.g. `"npx"`).
     pub command: String,
     /// Arguments passed to the command.
