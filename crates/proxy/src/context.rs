@@ -14,6 +14,7 @@ use forculus_ratelimit::cost::CostTracker;
 use forculus_ratelimit::limiter::RateLimiter;
 use forculus_vault::store::Vault;
 
+use crate::pins::PinStore;
 use crate::toolmap::ToolMapper;
 
 /// Shared context for processing a proxy request.
@@ -27,6 +28,8 @@ pub struct ProxyRequestContext {
     pub tool_mapper: Option<Arc<ToolMapper>>,
     pub rate_limiter: Option<Arc<RateLimiter>>,
     pub cost_tracker: Option<Arc<CostTracker>>,
+    /// Shared mutable store for tool-definition hash pins.
+    pub pin_store: Option<Arc<parking_lot::Mutex<PinStore>>>,
     pub http_analyzers: Option<Arc<HttpAnalyzerPipeline>>,
     /// Compiled host patterns that bypass TLS MITM (plain TCP passthrough).
     pub tls_passthrough: Option<Arc<Vec<GlobPattern>>>,
@@ -42,6 +45,7 @@ impl ProxyRequestContext {
             tool_mapper: None,
             rate_limiter: None,
             cost_tracker: None,
+            pin_store: None,
             http_analyzers: None,
             tls_passthrough: None,
         }

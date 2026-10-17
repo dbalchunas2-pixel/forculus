@@ -58,6 +58,8 @@ pub enum EventType {
     RateLimited,
     /// A request was denied because a cost budget was exceeded.
     BudgetExceeded,
+    /// A request was denied because a tool definition violated hash pinning.
+    ToolPinViolation,
     /// A CONNECT tunnel bypassed TLS MITM (passthrough mode).
     TlsPassthrough,
     /// A session was created via OIDC authentication.
