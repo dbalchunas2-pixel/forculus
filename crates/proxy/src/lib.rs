@@ -14,3 +14,4 @@ pub mod server;
 pub mod tls;
 pub mod toolmap;
 pub mod tunnel;
+pub mod pins;
