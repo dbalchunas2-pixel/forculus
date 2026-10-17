@@ -192,7 +192,8 @@ pub struct UpstreamServerConfig {
     /// ignored and the server is reached over HTTP instead of a spawned child.
     #[serde(default)]
     pub url: Option<String>,
-    /// Command to spawn (e.g. `"npx"`).
+    /// Command to spawn (e.g. `"npx"`). Ignored when `url` is set.
+    #[serde(default)]
     pub command: String,
     /// Arguments passed to the command.
     #[serde(default)]
