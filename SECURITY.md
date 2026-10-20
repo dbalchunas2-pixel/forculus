@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-**Contact:** security@forculus.[domain pending - see docs/SCAFFOLDING.md] 
+**Contact:** dbalchunas2@icloud.com 
 
 If you have found a vulnerability in Forculus, please report it privately. Do not open a public GitHub issue for security reports.
 
