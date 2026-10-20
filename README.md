@@ -14,7 +14,8 @@ Forculus is in active development and private dogfood burn-in on a live multi-se
 
 Source is published in the meantime because the build process should be as inspectable as the product:
 
-- **Shipped:** tool-definition hash pinning, poisoning pattern detection (validated against a 13-case adversarial torture corpus), hash-chained audit log, progressive schema disclosure (an aggregated 429-tool fleet collapsed into a 1.3 KB meta-interface), policy engine with hot-reload, MCP gateway (stdio + Streamable HTTP)
+- **Shipped:** tool-definition hash pinning, poisoning pattern detection (validated against a 13-case adversarial torture corpus), hash-chained audit log, policy engine with hot-reload, MCP gateway (stdio + Streamable HTTP)
+- **Landing in the next commit:** progressive schema disclosure (a running 429-tool fleet collapsed into a 1.3 KB meta-interface; code in final testing)
 - **In the build:** LLM-as-sensor intent classification, capability sandboxes, scoped credential vault, provenance trust cards, air-gapped threat-feed imports
 - **First public release:** after external security review. Watch this repo.
 
