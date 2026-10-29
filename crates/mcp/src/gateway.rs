@@ -296,6 +296,10 @@ impl McpGateway {
         }
         // Append builtin governance tools.
         result.extend(crate::tools::builtin_tools());
+        // Schema-diet every disclosed tool before it reaches the agent.
+        for tool in &mut result {
+            crate::schema_diet::minify_tool(tool, crate::schema_diet::MAX_DESCRIPTION_CHARS);
+        }
         result
     }
 

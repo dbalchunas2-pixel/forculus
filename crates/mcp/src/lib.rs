@@ -15,3 +15,4 @@ pub mod tools;
 pub mod transport;
 pub mod types;
 pub mod upstream;
+pub mod schema_diet;
