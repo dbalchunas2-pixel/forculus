@@ -568,7 +568,8 @@ async fn mcp_tool_call_produces_audit_event() {
     let config = forculus_config::McpGatewayConfig {
         upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "mock".into(),
-            url: None,            command: "python3".into(),
+            url: None,
+            command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
             env: Default::default(),
         }],
@@ -822,7 +823,8 @@ rules:
     let config = forculus_config::McpGatewayConfig {
         upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "leaky".into(),
-            url: None,            command: "python3".into(),
+            url: None,
+            command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
             env: Default::default(),
         }],
@@ -955,7 +957,8 @@ rules:
     let config = forculus_config::McpGatewayConfig {
         upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "bearer".into(),
-            url: None,            command: "python3".into(),
+            url: None,
+            command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
             env: Default::default(),
         }],
@@ -1045,7 +1048,8 @@ rules:
     let config = forculus_config::McpGatewayConfig {
         upstream_servers: vec![forculus_config::UpstreamServerConfig {
             name: "echo".into(),
-            url: None,            command: "python3".into(),
+            url: None,
+            command: "python3".into(),
             args: vec![script_path.to_str().unwrap().to_string()],
             env: Default::default(),
         }],

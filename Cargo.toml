@@ -13,6 +13,7 @@ members = [
     "crates/mcp",
     "crates/ratelimit",
     "crates/inspect-http",
+    "crates/forculus-sentinel",
     "crates/auth",
 ]
 
@@ -35,6 +36,7 @@ forculus-audit = { path = "crates/audit" }
 forculus-inspect = { path = "crates/inspect" }
 forculus-ratelimit = { path = "crates/ratelimit" }
 forculus-inspect-http = { path = "crates/inspect-http" }
+forculus-sentinel = { path = "crates/forculus-sentinel" }
 forculus-auth = { path = "crates/auth" }
 
 # Benchmarks

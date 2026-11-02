@@ -67,6 +67,7 @@ pub fn parse_tools_list(resp_body: &[u8]) -> Option<Vec<ToolDef>> {
 /// On `Changed`, emits a `ToolPinViolation` audit event and returns Err with
 /// a human-readable message; on `Pinned`/`NewServer`, returns Ok and the
 /// caller forwards the upstream response unchanged.
+#[allow(clippy::too_many_arguments)] // TODO(refactor): bundle args into a PinCheckContext struct
 pub fn verify_tools_list(
     pin_store: &Arc<Mutex<PinStore>>,
     channel: Channel,

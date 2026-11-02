@@ -20,7 +20,11 @@ impl HttpUpstream {
         let client = reqwest::Client::builder()
             .build()
             .map_err(|e| ForculusError::Mcp(format!("http client build failed: {e}")))?;
-        Ok(Self { url, client, session_id: None })
+        Ok(Self {
+            url,
+            client,
+            session_id: None,
+        })
     }
 
     async fn post(&self, body: Value) -> Result<reqwest::Response, ForculusError> {
@@ -39,7 +43,12 @@ impl HttpUpstream {
     }
 
     /// Send a JSON-RPC request; handles JSON and SSE responses plus session header.
-    async fn request(&mut self, id: i64, method: &str, params: Value) -> Result<Value, ForculusError> {
+    async fn request(
+        &mut self,
+        id: i64,
+        method: &str,
+        params: Value,
+    ) -> Result<Value, ForculusError> {
         let body = json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params });
         let resp = self.post(body).await?;
         if let Some(sid) = resp.headers().get("mcp-session-id") {
@@ -55,7 +64,9 @@ impl HttpUpstream {
             .unwrap_or("")
             .to_string();
         if !status.is_success() {
-            return Err(ForculusError::Mcp(format!("http upstream returned {status}")));
+            return Err(ForculusError::Mcp(format!(
+                "http upstream returned {status}"
+            )));
         }
         let extract = |v: Value| -> Result<Value, ForculusError> {
             if let Some(err) = v.get("error") {

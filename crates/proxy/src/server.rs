@@ -100,10 +100,7 @@ impl ProxyServer {
     }
 
     /// Attach a tool-definition pin store (F3).
-    pub fn with_pin_store(
-        mut self,
-        store: Arc<parking_lot::Mutex<crate::pins::PinStore>>,
-    ) -> Self {
+    pub fn with_pin_store(mut self, store: Arc<parking_lot::Mutex<crate::pins::PinStore>>) -> Self {
         self.ctx.pin_store = Some(store);
         self
     }

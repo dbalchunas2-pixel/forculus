@@ -5,22 +5,16 @@
 //! pass everything through untouched.
 
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
-use http_body_util::{BodyExt, Full};
-use secrecy::SecretString;
 use tokio::net::TcpListener;
 use tokio::process::{Child, Command as TokioCommand};
 use tokio_util::sync::CancellationToken;
 
 use forculus_config::ProxyConfig;
 use forculus_proxy::server::ProxyServer;
-use forculus_vault::credential::{Credential, CredentialType};
-use forculus_vault::session::CreateSessionParams;
-use forculus_vault::store::Vault;
 
 // ---------------------------------------------------------------------------
 // Test helpers

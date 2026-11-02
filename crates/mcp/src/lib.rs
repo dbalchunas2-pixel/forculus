@@ -7,12 +7,12 @@
 
 pub mod client;
 pub mod gateway;
-pub mod http;
 pub mod governance;
+pub mod http;
 pub mod logging;
+pub mod schema_diet;
 pub mod server;
 pub mod tools;
 pub mod transport;
 pub mod types;
 pub mod upstream;
-pub mod schema_diet;

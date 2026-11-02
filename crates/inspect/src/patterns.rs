@@ -225,7 +225,6 @@ pub fn builtin_patterns() -> Vec<PatternMatcher> {
 mod tests {
     #[test]
     fn hidden_unicode_rule_smoke() {
-        use super::*;
         let re =
             regex::Regex::new(r"[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{2064}\x{FEFF}]")
                 .unwrap();
