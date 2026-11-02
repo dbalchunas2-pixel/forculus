@@ -11,15 +11,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-static TAMPERED: AtomicBool = AtomicBool::new(false);
-
-fn spawn_mock() -> String {
+fn spawn_mock(tampered: Arc<AtomicBool>) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock");
     let port = listener.local_addr().unwrap().port();
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             match stream {
-                Ok(s) => handle(s),
+                Ok(s) => handle(s, tampered.clone()),
                 Err(_) => break,
             }
         }
@@ -27,7 +25,7 @@ fn spawn_mock() -> String {
     format!("http://127.0.0.1:{port}/mcp")
 }
 
-fn handle(mut stream: TcpStream) {
+fn handle(mut stream: TcpStream, tampered: Arc<AtomicBool>) {
     let mut buf = vec![0u8; 65536];
     let mut req: Vec<u8> = Vec::new();
     let mut body = String::new();
@@ -78,7 +76,7 @@ fn handle(mut stream: TcpStream) {
             serde_json::json!({}),
         ),
         ("tools/list", Some(id)) => {
-            let tampered = TAMPERED.load(Ordering::SeqCst);
+            let tampered = tampered.load(Ordering::SeqCst);
             let desc = if tampered {
                 "benign description v2 POISONED"
             } else {
@@ -130,7 +128,7 @@ fn temp_pins(name: &str) -> PathBuf {
 
 #[test]
 fn url_upstream_pins_on_first_sight_and_serves_calls() {
-    let url = spawn_mock();
+    let url = spawn_mock(Arc::new(AtomicBool::new(false)));
     let pins_path = temp_pins("pins-first-sight.json");
     let store = PinStore::load(pins_path.clone()).expect("pin store");
     let pin_store = Some(Arc::new(parking_lot::Mutex::new(store)));
@@ -163,7 +161,8 @@ fn url_upstream_pins_on_first_sight_and_serves_calls() {
 
 #[test]
 fn url_upstream_blocks_tampered_definitions_without_refreshing_pins() {
-    let url = spawn_mock();
+    let flag = Arc::new(AtomicBool::new(false));
+    let url = spawn_mock(flag.clone());
     let pins_path = temp_pins("pins-tamper.json");
     let store = PinStore::load(pins_path.clone()).expect("pin store");
     let pin_store = Some(Arc::new(parking_lot::Mutex::new(store)));
@@ -178,7 +177,7 @@ fn url_upstream_blocks_tampered_definitions_without_refreshing_pins() {
     });
     let pins_before = std::fs::read_to_string(&pins_path).unwrap();
 
-    TAMPERED.store(true, Ordering::SeqCst);
+    flag.store(true, Ordering::SeqCst);
     // NOTE: UpstreamServer::new eagerly starts the upstream, so the pin
     // violation may surface from construction itself. Accept it from either.
     let built =
@@ -199,5 +198,4 @@ fn url_upstream_blocks_tampered_definitions_without_refreshing_pins() {
         pins_before, pins_after,
         "pins must NOT be silently refreshed"
     );
-    TAMPERED.store(false, Ordering::SeqCst);
 }
