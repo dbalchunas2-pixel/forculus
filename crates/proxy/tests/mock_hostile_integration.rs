@@ -84,13 +84,25 @@ async fn start_mock_mcp_server(server_dir: &str, only: &str) -> (SocketAddr, Chi
         .spawn()
         .expect("failed to start mock MCP server");
 
-    // Give the server a moment to start, then verify it is still alive
-    // (a fixture path typo used to kill Node silently and hang the test).
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-    assert!(
-        child.id().is_some(),
-        "mock MCP server process died at startup"
-    );
+    // Wait until the server is ACTUALLY accepting connections. A 500ms
+    // sleep raced Node's listen on slower CI runners: the proxy's first
+    // forward hit a dead port and returned 502.
+    let deadline = tokio::time::Duration::from_secs(10);
+    let started = tokio::time::Instant::now();
+    loop {
+        if tokio::net::TcpStream::connect(&addr).await.is_ok() {
+            break;
+        }
+        assert!(
+            child.id().is_some(),
+            "mock MCP server process died at startup"
+        );
+        assert!(
+            started.elapsed() < deadline,
+            "mock MCP server never became ready"
+        );
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+    }
 
     (addr, child)
 }
