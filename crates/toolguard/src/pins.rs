@@ -138,13 +138,22 @@ mod tests {
     use super::*;
 
     fn tmp_path() -> PathBuf {
+        // PID + nanoseconds + atomic counter. The counter matters: two
+        // parallel test threads on a fast CI runner can land in the same
+        // nanosecond, collide on the filename, and one test's remove_file
+        // then deletes the other's store (observed as a flaky empty
+        // reload on macos-latest).
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let seq = SEQ.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!(
-            "forculus_pins_test_{}_{}.json",
+            "forculus_pins_test_{}_{}_{}.json",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            seq
         ))
     }
 
