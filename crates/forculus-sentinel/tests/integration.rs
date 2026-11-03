@@ -3,6 +3,8 @@ use forculus_sentinel::{
     Classification, Classifier, MockClassifier, Sentinel, SentinelError, cache_key,
 };
 use serde_json::{Value, json};
+use std::future::Future;
+use std::pin::Pin;
 
 struct FailingClassifier;
 
@@ -11,12 +13,12 @@ impl Classifier for FailingClassifier {
         "failing"
     }
 
-    async fn classify(
-        &self,
-        _method: &str,
-        _params: &Value,
-    ) -> Result<Classification, SentinelError> {
-        Err(SentinelError::Http("boom".to_string()))
+    fn classify<'a>(
+        &'a self,
+        _method: &'a str,
+        _params: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<Classification, SentinelError>> + Send + 'a>> {
+        Box::pin(async { Err(SentinelError::Http("boom".to_string())) })
     }
 }
 

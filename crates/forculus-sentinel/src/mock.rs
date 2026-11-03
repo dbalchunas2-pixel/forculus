@@ -8,6 +8,8 @@
 //! our own build once already. That is the product working.
 
 use serde_json::Value;
+use std::future::Future;
+use std::pin::Pin;
 
 use crate::classifier::Classification;
 use crate::{Classifier, SentinelError};
@@ -96,29 +98,31 @@ impl Classifier for MockClassifier {
         "mock-rules"
     }
 
-    async fn classify(
-        &self,
-        method: &str,
-        params: &Value,
-    ) -> Result<Classification, SentinelError> {
-        let haystack = format!("{method} {params}").to_lowercase();
-        let (verdict, category, reasoning) = match rule_category(&haystack) {
-            Some(category) => (
-                "block",
-                category,
-                format!("mock rule engine matched category: {category}"),
-            ),
-            None => (
-                "allow",
-                "safe",
-                "mock rule engine: no attack pattern matched".to_string(),
-            ),
-        };
-        Ok(Classification {
-            verdict: verdict.to_string(),
-            confidence: self.confidence,
-            reasoning,
-            category: category.to_string(),
+    fn classify<'a>(
+        &'a self,
+        method: &'a str,
+        params: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<Classification, SentinelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let haystack = format!("{method} {params}").to_lowercase();
+            let (verdict, category, reasoning) = match rule_category(&haystack) {
+                Some(category) => (
+                    "block",
+                    category,
+                    format!("mock rule engine matched category: {category}"),
+                ),
+                None => (
+                    "allow",
+                    "safe",
+                    "mock rule engine: no attack pattern matched".to_string(),
+                ),
+            };
+            Ok(Classification {
+                verdict: verdict.to_string(),
+                confidence: self.confidence,
+                reasoning,
+                category: category.to_string(),
+            })
         })
     }
 }

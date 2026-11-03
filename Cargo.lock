@@ -1318,6 +1318,7 @@ dependencies = [
  "forculus-inspect-http",
  "forculus-policy",
  "forculus-ratelimit",
+ "forculus-sentinel",
  "forculus-toolguard",
  "forculus-vault",
  "http",

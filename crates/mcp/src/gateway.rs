@@ -39,6 +39,7 @@ pub struct McpGateway {
     rate_limiter: Option<Arc<RateLimiter>>,
     cost_tracker: Option<Arc<CostTracker>>,
     http_analyzers: Option<Arc<HttpAnalyzerPipeline>>,
+    sentinel: Option<std::sync::Arc<forculus_sentinel::DynSentinel>>,
     /// Session token set by the agent (e.g. via an initialize param or header).
     session_token: parking_lot::Mutex<Option<String>>,
 }
@@ -97,6 +98,7 @@ impl McpGateway {
             rate_limiter: None,
             cost_tracker: None,
             http_analyzers: None,
+            sentinel: None,
             session_token: parking_lot::Mutex::new(None),
         })
     }
@@ -115,9 +117,20 @@ impl McpGateway {
             content_scanner: None,
             rate_limiter: None,
             cost_tracker: None,
+            sentinel: None,
             http_analyzers: None,
             session_token: parking_lot::Mutex::new(None),
         }
+    }
+
+    /// Attach the Sentinel LLM-sensor classification layer. When set, every
+    /// tools/call is classified before execution; blocks return POLICY_DENIED.
+    pub fn with_sentinel(
+        mut self,
+        sentinel: std::sync::Arc<forculus_sentinel::DynSentinel>,
+    ) -> Self {
+        self.sentinel = Some(sentinel);
+        self
     }
 
     /// Attach a policy engine for request evaluation.
@@ -599,6 +612,20 @@ impl McpGateway {
                         "policy: transform (not yet implemented, allowing)"
                     );
                 }
+            }
+        }
+
+        // Sentinel LLM sensor: classify the raw call before execution.
+        if let Some(sentinel) = &self.sentinel {
+            let raw_params = req.params.clone().unwrap_or(serde_json::Value::Null);
+            let verdict = sentinel.inspect("tools/call", &raw_params).await;
+            if !verdict.allowed {
+                tracing::warn!(layer = %verdict.layer, reason = %verdict.reasoning, "sentinel: block");
+                return JsonRpcResponse::error(
+                    req.id.clone(),
+                    POLICY_DENIED,
+                    format!("Sentinel blocked: {}", verdict.reasoning),
+                );
             }
         }
 

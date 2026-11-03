@@ -2,8 +2,10 @@
 
 use crate::breaker::Breaker;
 use crate::cache::{VerdictCache, cache_key};
-use crate::classifier::{Classification, Classifier};
+use crate::classifier::{Classification, Classifier, DynClassifier, LlamaClassifier, LlamaConfig};
+use crate::mock::MockClassifier;
 use serde_json::Value;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -130,3 +132,21 @@ impl<C: Classifier> Sentinel<C> {
         }
     }
 }
+
+impl Sentinel<DynClassifier> {
+    /// Builds the default stack from env: Llama API tier when
+    /// FORCULUS_LLAMA_API_KEY is set, otherwise the deterministic mock
+    /// tier. Production tuning (cache, breaker, confidence floor) applies.
+    pub fn from_env() -> Self {
+        match LlamaConfig::from_env() {
+            Some(config) => {
+                let classifier = LlamaClassifier::new(config).expect("valid reqwest client");
+                Sentinel::new(Arc::new(classifier) as DynClassifier)
+            }
+            None => Sentinel::new(Arc::new(MockClassifier::default()) as DynClassifier),
+        }
+    }
+}
+
+/// A Sentinel running any classifier backend (the gateway-facing type).
+pub type DynSentinel = Sentinel<DynClassifier>;

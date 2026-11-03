@@ -1,6 +1,9 @@
 //! Classifier trait + Llama API implementation (OpenAI-compatible chat
 //! completions endpoint).
 
+use std::future::Future;
+use std::pin::Pin;
+
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -84,66 +87,68 @@ impl Classifier for LlamaClassifier {
         "llama-api"
     }
 
-    async fn classify(
-        &self,
-        method: &str,
-        params: &Value,
-    ) -> Result<Classification, SentinelError> {
-        let mut args_str = serde_json::to_string(params).unwrap_or_default();
-        const MAX_BYTES: usize = 4 * 1024;
-        if args_str.len() > MAX_BYTES {
-            args_str.truncate(MAX_BYTES);
-            args_str.push_str("...[truncated]");
-        }
+    fn classify<'a>(
+        &'a self,
+        method: &'a str,
+        params: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<Classification, SentinelError>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut args_str = serde_json::to_string(params).unwrap_or_default();
+            const MAX_BYTES: usize = 4 * 1024;
+            if args_str.len() > MAX_BYTES {
+                args_str.truncate(MAX_BYTES);
+                args_str.push_str("...[truncated]");
+            }
 
-        let user_msg = format!(
-            "Classify this MCP tool call:\n\nMethod: {}\nArguments: {}\n\nIs this tool call safe to execute? Respond with JSON only.",
-            method, args_str
-        );
+            let user_msg = format!(
+                "Classify this MCP tool call:\n\nMethod: {}\nArguments: {}\n\nIs this tool call safe to execute? Respond with JSON only.",
+                method, args_str
+            );
 
-        let payload = json!({
-            "model": self.config.model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_msg}
-            ],
-            "temperature": 0.0,
-            "max_tokens": 4096,
-        });
+            let payload = json!({
+                "model": self.config.model,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_msg}
+                ],
+                "temperature": 0.0,
+                "max_tokens": 4096,
+            });
 
-        let url = format!(
-            "{}/chat/completions",
-            self.config.base_url.trim_end_matches('/')
-        );
-        let resp = self
-            .client
-            .post(&url)
-            .bearer_auth(&self.config.api_key)
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|e| SentinelError::Http(e.to_string()))?;
+            let url = format!(
+                "{}/chat/completions",
+                self.config.base_url.trim_end_matches('/')
+            );
+            let resp = self
+                .client
+                .post(&url)
+                .bearer_auth(&self.config.api_key)
+                .json(&payload)
+                .send()
+                .await
+                .map_err(|e| SentinelError::Http(e.to_string()))?;
 
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(SentinelError::Http(format!(
-                "Llama API error {status}: {body}"
-            )));
-        }
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                return Err(SentinelError::Http(format!(
+                    "Llama API error {status}: {body}"
+                )));
+            }
 
-        let body: Value = resp
-            .json()
-            .await
-            .map_err(|e| SentinelError::Parse(e.to_string()))?;
-        let content = body
-            .pointer("/choices/0/message/content")
-            .and_then(|c| c.as_str())
-            .ok_or_else(|| {
-                SentinelError::Parse("missing choices[0].message.content".to_string())
-            })?;
+            let body: Value = resp
+                .json()
+                .await
+                .map_err(|e| SentinelError::Parse(e.to_string()))?;
+            let content = body
+                .pointer("/choices/0/message/content")
+                .and_then(|c| c.as_str())
+                .ok_or_else(|| {
+                    SentinelError::Parse("missing choices[0].message.content".to_string())
+                })?;
 
-        parse_classification(content)
+            parse_classification(content)
+        })
     }
 }
 
@@ -165,14 +170,31 @@ pub fn parse_classification(content: &str) -> Result<Classification, SentinelErr
     serde_json::from_str(&stripped[start..=end]).map_err(|e| SentinelError::Parse(e.to_string()))
 }
 
-/// A classifier backend that judges a single MCP tool call.
-/// Object-safety is not required: Sentinel is generic over C.
+/// A classifier backend that judges a single MCP tool call. Dyn-compatible
+/// (boxed futures) so the gateway can hold any backend behind `Arc<dyn>`.
 pub trait Classifier: Send + Sync {
     fn name(&self) -> &str;
 
-    fn classify(
-        &self,
-        method: &str,
-        params: &Value,
-    ) -> impl std::future::Future<Output = Result<Classification, SentinelError>> + Send;
+    fn classify<'a>(
+        &'a self,
+        method: &'a str,
+        params: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<Classification, SentinelError>> + Send + 'a>>;
 }
+
+impl<T: Classifier + ?Sized> Classifier for std::sync::Arc<T> {
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+
+    fn classify<'a>(
+        &'a self,
+        method: &'a str,
+        params: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<Classification, SentinelError>> + Send + 'a>> {
+        (**self).classify(method, params)
+    }
+}
+
+/// Any classifier backend behind a trait object.
+pub type DynClassifier = std::sync::Arc<dyn Classifier>;

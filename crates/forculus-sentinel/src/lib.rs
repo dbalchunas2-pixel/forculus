@@ -13,9 +13,9 @@ pub mod sentinel;
 
 pub use breaker::Breaker;
 pub use cache::{VerdictCache, cache_key};
-pub use classifier::{Classification, Classifier, LlamaClassifier, LlamaConfig};
+pub use classifier::{Classification, Classifier, DynClassifier, LlamaClassifier, LlamaConfig};
 pub use mock::MockClassifier;
-pub use sentinel::{Sentinel, SentinelVerdict};
+pub use sentinel::{DynSentinel, Sentinel, SentinelVerdict};
 
 use thiserror::Error;
 
