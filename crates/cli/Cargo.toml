@@ -11,6 +11,7 @@ name = "forculus"
 path = "src/main.rs"
 
 [dependencies]
+forculus-sentinel.workspace = true
 forculus-common.workspace = true
 forculus-config.workspace = true
 forculus-proxy.workspace = true

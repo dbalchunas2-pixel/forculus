@@ -1230,6 +1230,7 @@ dependencies = [
  "forculus-mcp",
  "forculus-policy",
  "forculus-proxy",
+ "forculus-sentinel",
  "forculus-vault",
  "http",
  "http-body-util",

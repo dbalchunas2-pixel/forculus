@@ -61,7 +61,10 @@ pub fn start(config_path: &Path, log_level: Option<&str>) -> Result<()> {
     rt.block_on(async {
         let mut gateway = McpGateway::new(config.mcp_gateway)
             .await
-            .context("initialising MCP gateway")?;
+            .context("initialising MCP gateway")?
+            // Sentinel LLM sensor: Llama tier when FORCULUS_LLAMA_API_KEY is
+            // set, deterministic mock tier otherwise. Fail closed either way.
+            .with_sentinel(std::sync::Arc::new(forculus_sentinel::Sentinel::from_env()));
 
         // Load the policy engine if the policies directory exists.
         let policies_path = Path::new(&policies_dir);
@@ -245,7 +248,10 @@ pub fn serve(
     rt.block_on(async {
         let mut gateway = McpGateway::new(config.mcp_gateway)
             .await
-            .context("initialising MCP gateway")?;
+            .context("initialising MCP gateway")?
+            // Sentinel LLM sensor: Llama tier when FORCULUS_LLAMA_API_KEY is
+            // set, deterministic mock tier otherwise. Fail closed either way.
+            .with_sentinel(std::sync::Arc::new(forculus_sentinel::Sentinel::from_env()));
 
         // Load the policy engine if the policies directory exists.
         let policies_path = Path::new(&policies_dir);
